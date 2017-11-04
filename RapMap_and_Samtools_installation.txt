@@ -1,0 +1,69 @@
+We will complete the installation and running a working implementation in three steps:
+
+1. Installing samtools
+2. Installing RapMap
+3. Running RapMap
+
+1. Installing samtools
+--------------------------
+a) Use the link http://www.htslib.org/download/ to download samtools. Don't use the GitHub link which doesn't have some of the files in it. Download "samtools-1.6"
+
+b) Write down the following commands in order:
+		cd <inside the samtools-1.6 directory>
+    	./configure
+    	make
+
+	My machine didn't ask for any dependency in this case. If it does in yours, just read through the error messages and install the missing 	files.
+
+c) Edit the Path variable. It should be in your Home directory (as a hidden file. Press Ctrl+H to show it as .bashrc). Write down:
+		export PATH="$PATH:<insert directory to samtool-1.6 here>"
+	Save the file and exit.
+
+d) 	The path variable needs to be sourced. Type the following into the terminal:
+		source ~/.bashrc
+
+
+2. Installing RapMap
+---------------------------
+RapMap shouldn't ask for dependencies like jellyfish, tclap, etc. because these libraries are provided along with the RapMap package. However if error messages are displayed during installation, install the correct dependency as asked. However you can install the "cmake" library beforehand (at least it wasn't there in my system).
+
+a) Navigate to the RapMap cloned directory and execute the following commands in order:
+		mkdir build && cd build
+		cmake ..
+		make
+		make install
+		cd ../bin
+
+b) Navigate to the bin directory (just do cd .. and then cd bin if you have completed the previous steps). Execute:
+		./rapmap -h
+	
+	If you have successfully installed RapMap, the screen would show the RapMap commands available.
+
+
+3. Runing RapMap
+----------------------------
+a) Now we would go ahead and use RapMap. RapMap begins by building an index file for the reference assembly. So we would do that first. The RapMap folder contains a sample_data directory. Copy the fasta and two fastq files there to the bin directory of RapMap.
+
+b) Note that you have to run RapMap from the bin directory as this is the directory containing the executable file. So navigate to the bin directory (if you ain't there already).
+
+c) Execute the following command to create the index:
+		./rapmap quasiindex -t ref.fa -i ref_index
+
+	Note that we are using ./rapmap as the command and not rapmap as used in the readme file of RapMap. It doesn't work with just rapmap. A 	ref_index directory will be created within the bin directory
+
+	If you want to create an index with minimum perfect hashing, execute:
+		./rapmap quasiindex -t ref.fa -i ref_index -p -x 4
+
+	So either of the commands do the same thing. It's just the implementation that varies.
+
+d) In this step, we will create the SAM file. Execute:
+		./rapmap quasimap -i ref_index -1 reads_1.fastq -2 reads_2.fastq -t 8 -o mapped_reads.sam
+
+	A mapped_reads.sam file should be created which should be readable using a run-of-the-mill text editor. Note that the Readme in RapMap 		uses gunzip to unzip the fastq files. These are not zipped here and so we don't require gunzip.
+
+e) We will no go ahead and create the BAM file. Execute:
+		rapmap quasimap -i ref_index -1 reads_1.fastq -2 reads_2.fastq -t 8 | samtools view -Sb -@ 4 - > mapped_reads.bam
+
+	A mapped_reads.bam file should be produced which isn't readable using a text-editor. No need to open that. Trying to use RunRapMap.sh to create the BAM file didn't work for me. Just go with the command above and you should be fine (emphasis on the "should" :3 )
+
+And that should be all. You are now the proud owner of a working RapMap program!
