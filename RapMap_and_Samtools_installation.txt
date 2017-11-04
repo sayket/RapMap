@@ -1,4 +1,4 @@
-We will complete the installation and running a working implementation in three steps:
+We will complete the installation and run a working implementation in three steps:
 
 1. Installing samtools
 2. Installing RapMap
