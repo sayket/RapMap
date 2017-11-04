@@ -62,7 +62,7 @@ d) In this step, we will create the SAM file. Execute:
 	A mapped_reads.sam file should be created which should be readable using a run-of-the-mill text editor. Note that the Readme in RapMap 		uses gunzip to unzip the fastq files. These are not zipped here and so we don't require gunzip.
 
 e) We will no go ahead and create the BAM file. Execute:
-		rapmap quasimap -i ref_index -1 reads_1.fastq -2 reads_2.fastq -t 8 | samtools view -Sb -@ 4 - > mapped_reads.bam
+		./rapmap quasimap -i ref_index -1 reads_1.fastq -2 reads_2.fastq -t 8 | samtools view -Sb -@ 4 - > mapped_reads.bam
 
 	A mapped_reads.bam file should be produced which isn't readable using a text-editor. No need to open that. Trying to use RunRapMap.sh to create the BAM file didn't work for me. Just go with the command above and you should be fine (emphasis on the "should" :3 )
 
