@@ -47,12 +47,12 @@ a) Now we would go ahead and use RapMap. RapMap begins by building an index file
 b) Note that you have to run RapMap from the bin directory as this is the directory containing the executable file. So navigate to the bin directory (if you ain't there already).
 
 c) Execute the following command to create the index:
-		./rapmap quasiindex -t ref.fa -i ref_index
+		./rapmap quasiindex -t transcripts.fasta -i ref_index
 
 	Note that we are using ./rapmap as the command and not rapmap as used in the readme file of RapMap. It doesn't work with just rapmap. A 	ref_index directory will be created within the bin directory
 
 	If you want to create an index with minimum perfect hashing, execute:
-		./rapmap quasiindex -t ref.fa -i ref_index -p -x 4
+		./rapmap quasiindex -t transcripts.fasta -i ref_index -p -x 4
 
 	So either of the commands do the same thing. It's just the implementation that varies.
 
