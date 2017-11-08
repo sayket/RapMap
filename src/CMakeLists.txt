@@ -14,6 +14,7 @@ set (RAPMAP_MAIN_SRCS
     stringpiece.cc
     xxhash.c
     bit_array.c
+    shared_mem.cpp
 )
 
 set (RAPMAP_ALIGN_SRCS

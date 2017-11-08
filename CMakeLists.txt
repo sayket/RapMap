@@ -1,8 +1,15 @@
 cmake_minimum_required (VERSION 2.8)
+find_program(CMAKE_C_COMPILER NAMES $ENV{CC} gcc PATHS ENV PATH NO_DEFAULT_PATH)
+find_program(CMAKE_CXX_COMPILER NAMES $ENV{CXX} g++ PATHS ENV PATH NO_DEFAULT_PATH)
 
 enable_testing()
-
+#set(CMAKE_C_COMPILER "/gpfs/software/gcc-4.9.2/bin/gcc")
+#set(CMAKE_CXX_COMPILER "/gpfs/software/gcc-4.9.2/bin/g++")
+set(CMAKE_C_COMPILER "/cm/local/apps/gcc/5.1.0/bin/gcc")
+set(CMAKE_CXX_COMPILER "/cm/local/apps/gcc/5.1.0/bin/g++")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=haswell -mno-avx")
 project (RapMap)
+
 
 set(CPACK_PACKAGE_VERSION "0.5.0")
 SET(CPACK_PACKAGE_VERSION_MAJOR "0")
@@ -23,7 +30,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 #FindSSE ()
 #if(SSE4_2_FOUND)
 #    message("Enabling popcount")
-#    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.2 -DEMPHF_USE_POPCOUNT")
+#    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.2 -DEMPHF_USE_POPCOUNT ")
 #endif(SSE4_2_FOUND)
 
 if (APPLE)
@@ -39,7 +46,7 @@ SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 if (NO_NATIVE_ARCH)
   message (STATUS "DISABLING NATIVE ARCH.")
 else()
-  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=haswell -mno-avx")
 endif()
 
 
@@ -49,7 +56,7 @@ else()
   set(WALL "-Wall")
 endif()
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -funroll-loops -fPIC -fomit-frame-pointer -O4 -DHAVE_ANSI_TERM ${WALL} -std=c++11")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -funroll-loops -fPIC -fomit-frame-pointer -O2 -DHAVE_ANSI_TERM ${WALL} -std=c++11")
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
