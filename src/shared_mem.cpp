@@ -30,14 +30,15 @@ namespace shared_mem
 	#define SHM_ERROR_MSG(func, err_msg, err_no) std::cerr << "SHARED_MEM_ERROR in: " << \
 					 func << ": " << err_msg << " Error no:" << err_no << std::endl
 
+
 	
-	void * initSharedMemory(std::string name, int oflag, mode_t mode, off_t size, int *shm_fd)
+	void * initSharedMemory(std::string name, off_t size, int &shm_fd, int oflag, mode_t mode)
 	{
 		int shmFD;		// file descriptor, from shm_open()
   		void *shmBase = NULL;	// base address, from mmap()
-  		
+  		off_t allocateSize = size + extraSpaceInSharedMem;
   		/* create the shared memory segment as if it was a file */
-		shmFD = shm_open(name.c_str(), O_CREAT | O_RDWR, 0666);
+		shmFD = shm_open(name.c_str(), O_CREAT | O_RDWR, mode);
 		if (shmFD == -1) 
 		{
 			// std::cerr << "Unable to initialize Shared memory segment: " << strerror(errno) << std::endl;
@@ -46,10 +47,10 @@ namespace shared_mem
 		}
 
 		/* configure the size of the shared memory segment */
-  		ftruncate(shmFD, size);
+  		ftruncate(shmFD, allocateSize);
 
   		/* map the shared memory segment to the address space of the process */
-		shmBase = (char *)mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, shmFD, 0);
+		shmBase = (char *)mmap(0, allocateSize, PROT_READ | PROT_WRITE, MAP_SHARED, shmFD, 0);
 		if (shmBase == MAP_FAILED) 
 		{
 			// std::cerr << "Unable to Map the Shared memory segment: " << strerror(errno) << std::endl;
@@ -60,16 +61,17 @@ namespace shared_mem
 		}
 
 	out:
-		shm_fd = &shmFD;
+		shm_fd = shmFD;
 		return shmBase;
 
 	}
 
-	int deinitializeSharedMemory(void *shm_base, int shm_fd, off_t size)
+	int deinitializeSharedMemory(void *shm_base, int &shm_fd, off_t size)
 	{
 		int ret;
+		off_t deallocateSize = size + extraSpaceInSharedMem;
 		/* remove the mapped memory segment from the address space of the process */
-		ret=munmap(shm_base, size);
+		ret=munmap(shm_base, deallocateSize);
 		if (ret == -1) 
 		{
 			SHM_ERROR_MSG("deinitializeSharedMemory", "Unmap failed", errno);
@@ -105,8 +107,9 @@ namespace shared_mem
 	std::ostream& getOutputStream(void *shm_base, off_t size)
 	{
 		FILE *stream;
+		off_t memSize = size + extraSpaceInSharedMem;
 		// open the shared memory segment as a file
-		stream = fmemopen(shm_base, size, "w");
+		stream = fmemopen(shm_base, memSize, "w");
 		if (stream == NULL)
 		{
 		  // std::cerr << "Error opening the shared memory: " << strerror(errno) << std::endl;
@@ -119,6 +122,12 @@ namespace shared_mem
 		__gnu_cxx::stdio_filebuf<char> shmFileBuf(stream, std::ios::out);
 		std::ostream shmStream(&shmFileBuf);
 
+		std::cerr << "writing something on the ostream " << std::endl;
+
+		shmStream << 4;
+
+		std::cerr << "writing done on the ostream " << std::endl;
+
 		return shmStream;
 	}
 
@@ -127,8 +136,9 @@ namespace shared_mem
 	std::istream& getInputStream(void *shm_base, off_t size)
 	{
 		FILE *stream;
+		off_t memSize = size; //+ extraSpaceInSharedMem;
 		// open the shared memory segment as a file
-		stream = fmemopen(shm_base, size, "r");
+		stream = fmemopen(shm_base, memSize, "r");
 		if (stream == NULL)
 		{
 		  // std::cerr << "Error opening the shared memory: " << strerror(errno) << std::endl;
@@ -148,5 +158,15 @@ namespace shared_mem
 	// {
 	// 	void *shmBase = initSharedMemory(name, O_RDONLY, defaultFileMode, );
 	// }
+
+
+	// @for test purpose
+	void display(char *prog, char *bytes, int n)
+	{
+	  printf("display: %s\n", prog);
+	  for (int i = 0; i < n; i++) 
+	    { printf("%02x%c", bytes[i], ((i+1)%16) ? ' ' : '\n'); }
+	  printf("\n");
+	}
 
 }

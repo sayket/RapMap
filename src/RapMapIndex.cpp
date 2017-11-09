@@ -20,6 +20,7 @@
 //
 
 #include "RapMapIndex.hpp"
+#include "shared_mem.hpp"
 
 RapMapIndex::RapMapIndex() {}
 
@@ -123,7 +124,7 @@ bool RapMapIndex::load(std::string& indexPrefix) {
     }
     txpNameStream.close();
 
-    std::ifstream txpLenStream(txpLenFile, std::ios::binary);
+    /*std::ifstream txpLenStream(txpLenFile, std::ios::binary);
     {
         logger->info("loading transcript lengths");
         ScopedTimer timer;
@@ -132,7 +133,66 @@ bool RapMapIndex::load(std::string& indexPrefix) {
         logger->info("[{}] transcripts in index", txpLens.size());
         logger->info("done ");
     }
-    txpLenStream.close();
+    txpLenStream.close();*/
+    // *****************************************************
+    // @CSE549, we are trying to replace the calls to the filestream
+    // with calls to shared mem 
+    {
+        int txplensSHMFd;
+        off_t txplensSHMSize = 60;//shared_mem::txplensSHMSize;
+        // Init shared memory with the size of the vector
+
+        // std::cerr << "shared_mem name, txpLenFile = " << txpLenFile << std::endl;
+        // logger->info("shared_mem name = {} \n", txpLenFile);
+        void *txplensBase = shared_mem::initSharedMemory("txplens", 4096, txplensSHMFd, O_RDWR);
+        
+        shared_mem::display("loader process data:", (char *)txplensBase, 64);
+        // First save the len of the data that we are saving,
+        // this will be useful when reading the binary files later
+        // txplensSHMSize = *((off_t*)txplensBase);        
+        logger->info("Does saved data size match? = {} = {} \n", shared_mem::txplensSHMSize, txplensSHMSize);
+
+        // move the pointer
+        txplensBase += sizeof(off_t);
+    
+        // Get the output stream from the base address of the shared mem segment
+        // std::istream& txpLenStream = shared_mem::getInputStream(txplensBase, txplensSHMSize);
+        FILE *stream;
+        off_t memSize = txplensSHMSize + shared_mem::extraSpaceInSharedMem;
+        // open the shared memory segment as a file
+        stream = fmemopen(txplensBase, 4096, "r");
+        if (stream == NULL)
+        {
+            std::cerr << "Error opening the shared memory: " << strerror(errno) << std::endl;
+            // SHM_ERROR_MSG("getOutputStream", "Error opening the shared memory", errno);
+        }
+
+        // Converting a c FILE * to c++ stream
+        // We are using a GNU compiler dependent method, 
+        // won't work with other compiler
+        __gnu_cxx::stdio_filebuf<char> shmFileBuf(stream, std::ios::in);
+        std::istream txpLenStream(&shmFileBuf);
+
+        
+        logger->info("loading transcript lengths");
+        ScopedTimer timer;
+        // create cereal::BinaryOutputArchive object and save the binary to the shared memory
+        cereal::BinaryInputArchive txpLenArchive(txpLenStream);
+        
+        logger->info("Input stream created");
+        // txpLenArchive(txpLens);
+        // vector.data(), static_cast<std::size_t>( vectorSize ) * sizeof(T) )
+        txpLens.resize(15);
+        txpLenArchive.loadBinary(txpLens.data(), static_cast<std::size_t>( 15 ) * \
+                                 sizeof(decltype(txpLens)::value_type));
+        logger->info("[{}] transcripts in index", txpLens.size());
+        logger->info("done ");
+           
+        // close the shared memory segment from this process
+        shared_mem::deinitializeSharedMemory(txplensBase, txplensSHMFd, txplensSHMSize);
+        shared_mem::removeSharedMemory("txplens");
+        // *****************************************************
+    }
 
     std::ifstream fwdJumpStream(fwdJumpFile, std::ios::binary);
     {

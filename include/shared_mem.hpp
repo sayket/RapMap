@@ -45,7 +45,17 @@
 
 namespace shared_mem
 {
+	
+	// Just for testing purpose
+	static off_t txplensSHMSize;
+
+
 	const int defaultFileMode = 0666;
+
+	// We allocate extra 4K space in shared memory just to make sure we got
+	// enough memory to save the data structure related meta data
+	// e.g. std::vector might have some linkege pointer data
+	const off_t extraSpaceInSharedMem = 0;
 	// @brief initializes a shared memory segment, it creates/opens an
 	// existing shared memory segment with the given 'name' parameter
 	// @param 'name' name of the shared memroy segment
@@ -72,9 +82,9 @@ namespace shared_mem
 	// @param 'mode' which mode the file is being opened, user level access 
 	// @param 'size' size of the shared memory segment
 	// @param 'fd' "ouptut param" returns the file descriptor of the shared memory 
-	void * initSharedMemory(std::string name, int oflag, mode_t mode, off_t size, int *fd);
+	void * initSharedMemory(std::string name, off_t size, int &shm_fd, int oflag = O_CREAT | O_RDWR, mode_t mode = 0666);
 
-	int deinitializeSharedMemory();
+	int deinitializeSharedMemory(void *shm_base, int &shm_fd, off_t size);
 
 	// @brief unilinks a shared memory segment with name 'name'
 	// if no other process points to the file anymore,
@@ -94,7 +104,7 @@ namespace shared_mem
 
 	// @brief shm_base get output stream from a shared memory address
 	// @param shared meory address
-	std::ostream& getOutputStream(void *shm_base);
+	std::ostream& getOutputStream(void *shm_base, off_t size);
 
 	// @brief returns the intput stream pointed by the name
 	// @param name is the name of the shared memory segment to read from
@@ -105,7 +115,9 @@ namespace shared_mem
 
 	// @brief shm_base get input stream from a shared memory address
 	// @param shared meory address
-	std::ostream& getOutputStream(void *shm_base);
+	std::istream& getInputStream(void *shm_base, off_t size);
+
+	void display(char *prog, char *bytes, int n);
 
 }
 
