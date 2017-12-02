@@ -744,6 +744,9 @@ int rapMapSAIndex(int argc, char* argv[]) {
   TCLAP::ValueArg<std::string> customSeps("s", "headerSep", "Instead of a space or tab, break the header at the first "
                                           "occurrence of this string, and name the transcript as the token before "
                                           "the first separator", false, " \t", "string");
+
+	TCLAP::ValueArg<std::string> sharedMem("y", "sharedMemory", "Name of shared memory location", false, "","name string");
+
   TCLAP::SwitchArg noClip(
       "n", "noClip",
       "Don't clip poly-A tails from the ends of target sequences", false);
@@ -769,7 +772,12 @@ int rapMapSAIndex(int argc, char* argv[]) {
   cmd.add(perfectHash);
   cmd.add(customSeps);
   cmd.add(numHashThreads);
+	cmd.add(sharedMem);
   cmd.parse(argc, argv);
+
+	//test shared mem command
+	std::string memName=sharedMem.getValue();
+	//std::cerr<<"The shared memory location name is "<<memName<<'\n';
 
   // stupid parsing for now
   std::string transcriptFile(transcripts.getValue());

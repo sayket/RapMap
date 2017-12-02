@@ -736,11 +736,17 @@ int rapMapIndex(int argc, char* argv[]) {
     TCLAP::ValueArg<std::string> transcripts("t", "transcripts", "The transcript file to be indexed", true, "", "path");
     TCLAP::ValueArg<std::string> index("i", "index", "The location where the index should be written", true, "", "path");
     TCLAP::ValueArg<uint32_t> kval("k", "klen", "The length of k-mer to index", false, 31, "positive integer less than 32");
+	TCLAP::ValueArg<std::string> sharedMem("y", "sharedMemory", "Name of shared memory location", false, "","name string");
     cmd.add(transcripts);
     cmd.add(index);
     cmd.add(kval);
+	cmd.add(sharedMem);	
 
     cmd.parse(argc, argv);
+
+	//test shared mem command
+	std::string memName=sharedMem.getValue();
+	//std::cerr<<"The shared memory location name is "<<memName<<'\n';
 
     // stupid parsing for now
     std::string transcriptFile(transcripts.getValue());
