@@ -55,8 +55,6 @@
 #include "jellyfish/mer_iterator.hpp"
 #include "JFRaw.hpp"
 
-#include "shared_mem.hpp"
-
 #include <chrono>
 
 using single_parser = fastx_parser::FastxParser<fastx_parser::ReadSeq>;
@@ -300,83 +298,12 @@ void processTranscripts(ParserT* parser,
 
     std::cerr << "Clipped poly-A tails from " << numPolyAsClipped << " transcripts\n";
 
-    /*std::ofstream txpLenStream(outputDir + "txplens.bin", std::ios::binary);
+    std::ofstream txpLenStream(outputDir + "txplens.bin", std::ios::binary);
     {
         cereal::BinaryOutputArchive txpLenArchive(txpLenStream);
         txpLenArchive(transcriptLengths);
     }
-    txpLenStream.close();*/
-    
-    // *****************************************************
-    // @CSE549, we are trying to replace the calls to the filestream
-    // with calls to shared mem 
-
-    {
-        int txplensSHMFd;
-        // off_t txplensSHMSize = transcriptLengths.capacity() * \
-        //                         sizeof(decltype(transcriptLengths)::value_type) \
-        //                       + sizeof(transcriptLengths);
-        off_t txplensSHMSize = transcriptLengths.size() * \
-                            sizeof(decltype(transcriptLengths)::value_type);
-        // Init shared memory with the size of the vector
-
-        std::cerr << "shared_mem name (output)= " << (outputDir + "txplens.bin").c_str() << std::endl;
-        std::cerr << "Size of the data = " << sizeof(transcriptLengths) << "=" \
-                    << txplensSHMSize << ", vector_size = " << transcriptLengths.size() << std::endl;
-        // shared_mem::removeSharedMemory("txplens");
-        void *txplensBase = shared_mem::initSharedMemory(("txplens"), 4096, txplensSHMFd);
-        
-        // First save the len of the data that we are saving,
-        // this will be useful when reading the binary files later
-        // *((off_t*)txplensBase) = txplensSHMSize;
-    
-        // // move the pointer
-        // txplensBase += sizeof(off_t);
-        std::cerr << "shared_mem initialized, Fd= " << txplensSHMFd << std::endl;
-        // Get the output stream from the base address of the shared mem segment
-        // std::ostream txpLenStream = shared_mem::getOutputStream(txplensBase, txplensSHMSize);
-
-        FILE *stream;
-        off_t memSize = txplensSHMSize + shared_mem::extraSpaceInSharedMem;
-        // open the shared memory segment as a file
-        stream = fmemopen(txplensBase, 4096, "w");
-        if (stream == NULL)
-        {
-            std::cerr << "Error opening the shared memory: " << strerror(errno) << std::endl;
-            // SHM_ERROR_MSG("getOutputStream", "Error opening the shared memory", errno);
-        }
-
-
-        // Converting a c FILE * to c++ stream
-        // We are using a GNU compiler dependent method, 
-        // won't work with other compiler
-        __gnu_cxx::stdio_filebuf<char> shmFileBuf(stream, std::ios::out);
-        std::ostream txpLenStream(&shmFileBuf);
-
-        // txpLenStream << 4;
-        std::cerr << "ostream created" << std::endl;
-        // create cereal::BinaryOutputArchive object and save the binary to the shared memory
-        cereal::BinaryOutputArchive txpLenArchive(txpLenStream);
-
-        std::cerr << "BinaryOutputArchive created" << std::endl;
-
-        // txpLenArchive(transcriptLengths);
-        txpLenArchive.saveBinary(transcriptLengths.data(), txplensSHMSize);
-        
-        shared_mem::display("saver process data:", (char *)txplensBase, 64);
-
-        std::cerr << "File saved" << std::endl;
-        // close the shared memory segment from this process
-        shared_mem::deinitializeSharedMemory(txplensBase, txplensSHMFd, txplensSHMSize);
-
-        std::cerr << "Deinitialize shared_mem " << std::endl;
-        // @test, just save the data size in a variable to access during read
-        shared_mem::txplensSHMSize =  txplensSHMSize;
-
-    }
-
-    // *****************************************************
-
+    txpLenStream.close();
     transcriptLengths.clear();
     transcriptLengths.shrink_to_fit();
 
@@ -809,11 +736,17 @@ int rapMapIndex(int argc, char* argv[]) {
     TCLAP::ValueArg<std::string> transcripts("t", "transcripts", "The transcript file to be indexed", true, "", "path");
     TCLAP::ValueArg<std::string> index("i", "index", "The location where the index should be written", true, "", "path");
     TCLAP::ValueArg<uint32_t> kval("k", "klen", "The length of k-mer to index", false, 31, "positive integer less than 32");
+	TCLAP::ValueArg<std::string> sharedMem("y", "sharedMemory", "Name of shared memory location", false, "","name string");
     cmd.add(transcripts);
     cmd.add(index);
     cmd.add(kval);
+	cmd.add(sharedMem);	
 
     cmd.parse(argc, argv);
+
+	//test shared mem command
+	std::string memName=sharedMem.getValue();
+	//std::cerr<<"The shared memory location name is "<<memName<<'\n';
 
     // stupid parsing for now
     std::string transcriptFile(transcripts.getValue());
