@@ -442,17 +442,21 @@ bool buildHash(const std::string& outputDir, std::string& concatText,
   // using cereal
   for( auto it=khash.begin(); it!=khash.end(); it++)
   {
-    hashkey.push_back(it.first);
-    hashVal.push_back(it.second);
+    hashkey.push_back(it->first);
+    hashVal.push_back(it->second);
   }
 
   // Now save them using the shared_mem vector saver
   {
-    shared_mem::saveBinaryVector(transcriptLengths, ("hash-key"));
-    std::cerr << "\n shared::memory:: Saved the txplens to shared memory \n";
+    shared_mem::saveBinaryVector(hashkey, (shared_mem::memName + "hashkey"));
+    std::cerr << "\n shared::memory:: Saved the hashkey to shared memory \n";
+    shared_mem::saveBinaryVector(hashVal, (shared_mem::memName + "hashval"));
+    std::cerr << "\n shared::memory:: Saved the hashval to shared memory \n";
   }
 
-  std::ofstream hashStream(outputDir + "hash.bin", std::ios::binary);
+  shared_mem::removeSharedMemoryWithPrefix(shared_mem::memName);
+
+  /*std::ofstream hashStream(outputDir + "hash.bin", std::ios::binary);
   {
     ScopedTimer timer;
     std::cerr << "saving hash to disk . . . ";
@@ -460,7 +464,7 @@ bool buildHash(const std::string& outputDir, std::string& concatText,
                     &hashStream);
     std::cerr << "done\n";
   }
-  hashStream.close();
+  hashStream.close();*/
   return true;
 }
 
@@ -871,8 +875,9 @@ int rapMapSAIndex(int argc, char* argv[]) {
 	cmd.add(sharedMem);
   cmd.parse(argc, argv);
 
+  // @CSE549
 	//test shared mem command
-  if (sharedMem.getValue())
+  if (!sharedMem.getValue().empty())
   {
     shared_mem::memName=sharedMem.getValue();
     shared_mem::isSharedMem = true;

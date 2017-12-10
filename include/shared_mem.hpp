@@ -67,6 +67,13 @@ namespace shared_mem
 	// A flag to check if the data is going to be written to or laoded from shared mem
 	static bool isSharedMem = false;
 
+
+	// Name of the files that we save in the shared memory
+	const std::vector<std::string>fileName = {
+		"hashkey",
+		"hashval"
+	};
+
 	// We allocate extra 4K space in shared memory just to make sure we got
 	// enough memory to save the data structure related meta data
 	// e.g. std::vector might have some linkege pointer data
@@ -214,6 +221,14 @@ namespace shared_mem
 		// close the shared memory segment from this process
         shared_mem::deinitializeSharedMemory(shmBase, shmFd, shmSize);
 	}
+
+	// @brief remove the shared memory segments
+	// We iterate through the shmSegmentToSizeMap which contains all the shared memory name
+	// We might want to keep a const vector which tracks all the possible shared mem segment
+	// we create, 
+	// Now the the user can give us the shared_mem name prefix and we can iterate through the vector
+	// to remove them
+	int removeSharedMemoryWithPrefix(std::string prefix);
 
 
 

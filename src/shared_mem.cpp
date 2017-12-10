@@ -30,6 +30,10 @@ namespace shared_mem
 	#define SHM_ERROR_MSG(func, err_msg, err_no) std::cerr << "SHARED_MEM_ERROR in: " << \
 					 func << ": " << err_msg << " Error no:" << err_no << std::endl
 
+	// success message macro
+	#define SHM_SUCCESS_MSG(func, msg) std::cerr << "SHARED_MEM_SUCCESS in: " << \
+					 func << ": " << msg << std::endl
+
 	
 	
 	void * initSharedMemory(std::string name, off_t size, int &shm_fd, int oflag, mode_t mode)
@@ -60,6 +64,8 @@ namespace shared_mem
 			goto out;
 		}
 
+		SHM_SUCCESS_MSG("initSharedMemory", "shared_mem segment " + name + " created");
+
 	out:
 		shm_fd = shmFD;
 		return shmBase;
@@ -86,6 +92,7 @@ namespace shared_mem
 			goto out;
 		}
 
+		SHM_SUCCESS_MSG("deinitializeSharedMemory", "shared_mem segment unmapped from process private address space");
 	out:
 		return ret;
 
@@ -98,6 +105,18 @@ namespace shared_mem
 		{
 			// std::cerr << "Unable to unlink the Shared memory segment: " << strerror(errno) << std::endl;
 			SHM_ERROR_MSG("removeSharedMemory", "Unable to unlink the Shared memory segment", errno);
+		}
+		SHM_SUCCESS_MSG("removeSharedMemory", name + " removed");
+		return ret;
+	}
+
+	int removeSharedMemoryWithPrefix(std::string prefix)
+	{
+		int ret;
+		for(auto f: fileName)
+		{
+			if((ret=removeSharedMemory(prefix + f) == -1))
+				break;
 		}
 
 		return ret;
