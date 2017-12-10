@@ -20,12 +20,8 @@
 #ifndef RSDIC_UTIL_HPP_
 #define RSDIC_UTIL_HPP_
 
-#include <iostream>
-#include <map>
 #include <vector>
 #include <stdint.h>
-#include <cereal/archives/binary.hpp>
-#include <cereal/archives/json.hpp>
 #include "Const.hpp"
 
 namespace rsdic{
@@ -65,14 +61,6 @@ public:
     else return total - num;
   }
 
-	static void writeMemJSON(map<std::sring,uint64_t> m,std::string outputDir) {
-		std::ofstream memNameStream(outputDir + "memName.json");
-	  {
-		cereal::JSONOutputArchive archive(memNameStream);
-		archive(m);
-	  }
-  		memNameStream.close();
-}
 
 };
 

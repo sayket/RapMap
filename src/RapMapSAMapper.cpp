@@ -552,7 +552,6 @@ int rapMapSAMap(int argc, char* argv[]) {
   TCLAP::ValueArg<uint32_t> maxNumHits("m", "maxNumHits", "Reads mapping to more than this many loci are discarded", false, 200, "positive integer");
   TCLAP::ValueArg<std::string> outname("o", "output", "The output file (default: stdout)", false, "", "path");
   TCLAP::ValueArg<double> quasiCov("z", "quasiCoverage", "Require that this fraction of a read is covered by MMPs before it is considered mappable.", false, 0.0, "double in [0,1]");
-	TCLAP::ValueArg<std::string> sharedMem("y", "sharedMemory", "Name of shared memory location", false, "", "name string");
   TCLAP::SwitchArg noout("n", "noOutput", "Don't write out any alignments (for speed testing purposes)", false);
   TCLAP::SwitchArg sensitive("e", "sensitive", "Perform a more sensitive quasi-mapping by disabling NIP skipping", false);
   TCLAP::SwitchArg noStrict("", "noStrictCheck", "Don't perform extra checks to try and assure that only equally \"best\" mappings for a read are reported", false);
@@ -574,21 +573,13 @@ int rapMapSAMap(int argc, char* argv[]) {
   cmd.add(fuzzy);
   cmd.add(consistent);
   cmd.add(quiet);
-	cmd.add(sharedMem);
   
-  auto rawConsoleSink = std::make_shared<spdlog::sinks::stderr_sink_mt>();
-  auto consoleSink =
-      std::make_shared<spdlog::sinks::ansicolor_sink>(rawConsoleSink);
+  auto consoleSink = std::make_shared<spdlog::sinks::ansicolor_stderr_sink_mt>();
   auto consoleLog = spdlog::create("stderrLog", {consoleSink});
-  
+
   try {
 
     cmd.parse(argc, argv);
-
-	//test shared mem command
-	std::string memName=sharedMem.getValue();
-	//std::cerr<<"The shared memory location name is "<<memName<<'\n';
-
     // If we're supposed to be quiet, only print out warnings and above
     if (quiet.getValue()) {
         consoleLog->set_level(spdlog::level::warn);

@@ -955,7 +955,6 @@ int rapMapMap(int argc, char* argv[]) {
     TCLAP::ValueArg<std::string> outname("o", "output", "The output file (default: stdout)", false, "", "path");
     TCLAP::SwitchArg endCollectorSwitch("e", "endCollector", "Use the simpler (and faster) \"end\" collector as opposed to the more sophisticated \"skipping\" collector", false);
     TCLAP::SwitchArg noout("n", "noOutput", "Don't write out any alignments (for speed testing purposes)", false);
-	TCLAP::ValueArg<std::string> sharedMem("y", "sharedMemory", "Name of shared memory location", false, "", "name string");
     cmd.add(index);
     cmd.add(noout);
 
@@ -966,7 +965,6 @@ int rapMapMap(int argc, char* argv[]) {
     cmd.add(numThreads);
     cmd.add(maxNumHits);
     cmd.add(endCollectorSwitch);
-	cmd.add(sharedMem);
 
     auto consoleSink = std::make_shared<spdlog::sinks::stderr_sink_mt>();
     auto consoleLog = spdlog::create("stderrLog", {consoleSink});
@@ -974,11 +972,6 @@ int rapMapMap(int argc, char* argv[]) {
     try {
 
 	cmd.parse(argc, argv);
-
-	//test shared mem command
-	std::string memName=sharedMem.getValue();
-	//std::cerr<<"The shared memory location name is "<<memName<<'\n';
-
 	bool pairedEnd = (read1.isSet() or read2.isSet());
 	if (pairedEnd and (read1.isSet() != read2.isSet())) {
 	    consoleLog->error("You must set both the -1 and -2 arguments to align "
