@@ -39,18 +39,30 @@
 #include <string>
 #include <sys/stat.h>        /* For mode constants */
 #include <fcntl.h>           /* For O_* constants */
+#include <vector>
+#include <map>
+
+#include <cereal/types/unordered_map.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/archives/binary.hpp>
 
 
 
 
 namespace shared_mem
 {
-	
-	// Just for testing purpose
-	static off_t txplensSHMSize;
-
-
 	const int defaultFileMode = 0666;
+
+	// page size, needed to allocate shared memory
+	const int SHM_PAGE_SIZE = 4096;
+
+
+	// Map to save the segment size of specific shared memory segment
+	static std::map<std::string, int> shmSegmentToSizeMap;
+
+	// A flag to check if the data is going to be written to or laoded from shared mem
+	static bool isSharedMem = false;
 
 	// We allocate extra 4K space in shared memory just to make sure we got
 	// enough memory to save the data structure related meta data
@@ -116,6 +128,92 @@ namespace shared_mem
 	// @brief shm_base get input stream from a shared memory address
 	// @param shared meory address
 	std::istream& getInputStream(void *shm_base, off_t size);
+
+
+
+	// @brief saves a std::vector 'vec' data to shared memory name 'name' 
+	// in a serialized binary format
+	// uses cereal for serializing
+	// @param vec vector to save
+	// @param name place to save
+	template<typename T, typename A>
+	void saveBinaryVector( std::vector<T,A> const& vec, std::string name ) 
+	{
+		int shmFd;
+		size_t dataSize = static_cast<std::size_t>( vec.size() * sizeof(T) );
+
+		// Size on the shared memory would be the minimum (SHM_PAGE_SIZE)4K size that can
+		// hold the vector data
+		off_t shmSize = static_cast<off_t>(((dataSize/SHM_PAGE_SIZE) + 1 ) * SHM_PAGE_SIZE);
+
+        void *shmBase = shared_mem::initSharedMemory(name, shmSize, shmFd);
+
+        // @FIXME:
+        // Converting a c file descriptor to c++ stream
+        // We are using a GNU compiler dependent method, 
+        // won't work with other compiler
+        __gnu_cxx::stdio_filebuf<char> shmFileBuf(shmFd, std::ios::out);
+		{
+			std::ostream shmStream(&shmFileBuf);
+			// create cereal::BinaryOutputArchive object and save the binary to the shared memory
+			cereal::BinaryOutputArchive shmArchive(shmStream);
+			// shmArchive(vec);
+			shmArchive.saveBinary(vec.data(), dataSize);
+			shmStream.flush();
+		}
+		
+		// close the shared memory segment from this process
+        shared_mem::deinitializeSharedMemory(shmBase, shmFd, shmSize);
+
+        // save the information about the size of the data in a json file
+        // We need this info to open the shared memory for loading the data in the future
+
+        // @TODO: We may want to write this data at the end of the indexer process
+        // We can use a json file to write the data
+        // On the meantime during the indexer process we can save this data in a map
+
+        // @TODO: Similarly we can load this map from the json file at the 
+        // beginning of the mapping process
+        shmSegmentToSizeMap[name] = dataSize;
+	}
+
+	// @brief loads a std::vector 'vec' data from shared memory name 'name' 
+	// from a serialized binary format to a std::vector
+	// uses cereal for de-serializing
+	// @param vec vector to load to
+	// @param name place to load from
+	template<typename T, typename A>
+	void loadBinaryVector( std::vector<T,A> & vec, std::string name ) 
+	{
+		int shmFd;
+		size_t dataSize = static_cast<std::size_t>(shmSegmentToSizeMap[name]);
+		int vecSize = dataSize/sizeof(T);
+		// Size on the shared memory that was allocated to hold the vector data
+		off_t shmSize = static_cast<off_t>(((dataSize/SHM_PAGE_SIZE) + 1 ) * SHM_PAGE_SIZE);
+		// off_t shmSize = 4096; //just for test purpose
+
+        void *shmBase = shared_mem::initSharedMemory(name, shmSize, shmFd);
+
+        // @FIXME:
+        // Converting a c file descriptor to c++ stream
+        // We are using a GNU compiler dependent method, 
+        // won't work with other compiler
+        __gnu_cxx::stdio_filebuf<char> shmFileBuf(shmFd, std::ios::in);
+		{
+			std::istream shmStream(&shmFileBuf);
+			// create cereal::BinaryOutputArchive object and save the binary to the shared memory
+			cereal::BinaryInputArchive shmArchive(shmStream);
+			// shmArchive(vec);
+			vec.resize(vecSize);
+			shmArchive.loadBinary(vec.data(), dataSize);
+		}
+		
+		// close the shared memory segment from this process
+        shared_mem::deinitializeSharedMemory(shmBase, shmFd, shmSize);
+	}
+
+
+
 
 	void display(char *prog, char *bytes, int n);
 

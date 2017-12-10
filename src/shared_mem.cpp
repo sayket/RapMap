@@ -30,7 +30,7 @@ namespace shared_mem
 	#define SHM_ERROR_MSG(func, err_msg, err_no) std::cerr << "SHARED_MEM_ERROR in: " << \
 					 func << ": " << err_msg << " Error no:" << err_no << std::endl
 
-
+	
 	
 	void * initSharedMemory(std::string name, off_t size, int &shm_fd, int oflag, mode_t mode)
 	{
@@ -153,11 +153,6 @@ namespace shared_mem
 
 		return shmStream;
 	}
-
-	// std::istream getInputStream(std::string name, )
-	// {
-	// 	void *shmBase = initSharedMemory(name, O_RDONLY, defaultFileMode, );
-	// }
 
 
 	// @for test purpose
