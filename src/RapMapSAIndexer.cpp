@@ -77,6 +77,8 @@
 
 #include <chrono>
 
+#include "shared_mem.hpp"
+
 using single_parser = fastx_parser::FastxParser<fastx_parser::ReadSeq>;
 using TranscriptID = uint32_t;
 using TranscriptIDVector = std::vector<TranscriptID>;
@@ -436,8 +438,19 @@ bool buildHash(const std::string& outputDir, std::string& concatText,
   std::vector<WordT> hashkey;
   std::vector<rapmap::utils::SAInterval<IndexT>> hashVal;
 
-  // iteraate throuogh the map and load 
-  auto 
+  // iteraate throuogh the map and load the key value to the vectors to save them
+  // using cereal
+  for( auto it=khash.begin(); it!=khash.end(); it++)
+  {
+    hashkey.push_back(it.first);
+    hashVal.push_back(it.second);
+  }
+
+  // Now save them using the shared_mem vector saver
+  {
+    shared_mem::saveBinaryVector(transcriptLengths, ("hash-key"));
+    std::cerr << "\n shared::memory:: Saved the txplens to shared memory \n";
+  }
 
   std::ofstream hashStream(outputDir + "hash.bin", std::ios::binary);
   {
@@ -859,7 +872,12 @@ int rapMapSAIndex(int argc, char* argv[]) {
   cmd.parse(argc, argv);
 
 	//test shared mem command
-	std::string memName=sharedMem.getValue();
+  if (sharedMem.getValue())
+  {
+    shared_mem::memName=sharedMem.getValue();
+    shared_mem::isSharedMem = true;
+  }
+	
 	//std::cerr<<"The shared memory location name is "<<memName<<'\n';
 
   // stupid parsing for now

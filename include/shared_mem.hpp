@@ -57,6 +57,9 @@ namespace shared_mem
 	// page size, needed to allocate shared memory
 	const int SHM_PAGE_SIZE = 4096;
 
+	// Name of the shared memory, we will use this name + file name to 
+	// create different segment name
+	static std::string memName;
 
 	// Map to save the segment size of specific shared memory segment
 	static std::map<std::string, int> shmSegmentToSizeMap;
