@@ -426,6 +426,19 @@ bool buildHash(const std::string& outputDir, std::string& concatText,
     }
   }
   std::cerr << "\nkhash had " << khash.size() << " keys\n";
+  
+  /* 
+   * @CSE549 Save regHash to shared memory
+   * @TODO: We could make the hash into two vectors of key and value 
+   * Then save the vectors in the file
+   * We can just load them using as vector then make a map out of it 
+   */
+  std::vector<WordT> hashkey;
+  std::vector<rapmap::utils::SAInterval<IndexT>> hashVal;
+
+  // iteraate throuogh the map and load 
+  auto 
+
   std::ofstream hashStream(outputDir + "hash.bin", std::ios::binary);
   {
     ScopedTimer timer;

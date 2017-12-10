@@ -124,7 +124,7 @@ bool RapMapIndex::load(std::string& indexPrefix) {
     }
     txpNameStream.close();
 
-    /*std::ifstream txpLenStream(txpLenFile, std::ios::binary);
+    std::ifstream txpLenStream(txpLenFile, std::ios::binary);
     {
         logger->info("loading transcript lengths");
         ScopedTimer timer;
@@ -133,11 +133,23 @@ bool RapMapIndex::load(std::string& indexPrefix) {
         logger->info("[{}] transcripts in index", txpLens.size());
         logger->info("done ");
     }
-    txpLenStream.close();*/
+    txpLenStream.close();
     // *****************************************************
     // @CSE549, we are trying to replace the calls to the filestream
     // with calls to shared mem 
-    {
+    // {
+    //     logger->info("loading transcript lengths");
+    //     ScopedTimer timer;
+    //     shared_mem::loadBinaryVector(txpLens, "txplens.bin");
+    //     logger->info("[{}] transcripts in index", txpLens.size());
+    //     logger->info("done ");
+    //     for (auto it=txpLens.begin(); it != txpLens.end(); ++it)
+    //     {
+    //         std::cerr << *it << std::endl;
+    //         logger->info(*it);
+    //     }
+    // }
+    /*{
         int txplensSHMFd;
         off_t txplensSHMSize = 60;//shared_mem::txplensSHMSize;
         // Init shared memory with the size of the vector
@@ -192,7 +204,7 @@ bool RapMapIndex::load(std::string& indexPrefix) {
         shared_mem::deinitializeSharedMemory(txplensBase, txplensSHMFd, txplensSHMSize);
         shared_mem::removeSharedMemory("txplens");
         // *****************************************************
-    }
+    }*/
 
     std::ifstream fwdJumpStream(fwdJumpFile, std::ios::binary);
     {
