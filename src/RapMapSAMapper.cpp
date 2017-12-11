@@ -62,6 +62,7 @@
 
 #include "tclap/CmdLine.h"
 
+
 /*extern "C" {
 #include "kseq.h"
 }
@@ -82,6 +83,8 @@
 #include "IndexHeader.hpp"
 #include "SASearcher.hpp"
 #include "SACollector.hpp"
+
+#include "shared_mem.hpp"
 
 //#define __TRACK_CORRECT__
 
@@ -583,8 +586,25 @@ int rapMapSAMap(int argc, char* argv[]) {
 
     cmd.parse(argc, argv);
 
-	//test shared mem command
-	std::string memName=sharedMem.getValue();
+  	//test shared mem command
+    // @CSE549
+    //test shared mem command
+    if (!sharedMem.getValue().empty())
+    {
+      shared_mem::memName=sharedMem.getValue();
+      // std::cerr << "Inside SAMapper - shared_mem name = " << shared_mem::memName << std::endl;
+      shared_mem::isSharedMem = true;
+    }
+
+    // load the shared memory segment names to shmSegmentToSizeMap
+    shared_mem::loadJSONMap(shared_mem::shmSegmentToSizeMap, "shm_segment_size.json");
+    // test 
+    for(auto m:shared_mem::shmSegmentToSizeMap)
+    {
+      std::cerr << m.first <<"-" << m.second <<std::endl;
+    }
+
+	// std::string memName=sharedMem.getValue();
 	//std::cerr<<"The shared memory location name is "<<memName<<'\n';
 
     // If we're supposed to be quiet, only print out warnings and above

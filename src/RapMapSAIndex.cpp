@@ -18,7 +18,7 @@
 // You should have received a copy of the GNU General Public License
 // along with RapMap.  If not, see <http://www.gnu.org/licenses/>.
 //
-
+#include <cstdio>
 #include "BooMap.hpp"
 #include "FrugalBooMap.hpp"
 #include "RapMapSAIndex.hpp"
@@ -29,6 +29,12 @@
 #include <cereal/archives/binary.hpp>
 #include <cereal/archives/json.hpp>
 
+#include <iostream>
+#include <map>
+#include <vector>
+
+
+#include "shared_mem.hpp"
 
 #include <future>
 #include <thread>
@@ -68,11 +74,46 @@ template <typename IndexT>
 bool loadHashFromIndex(const std::string& indexDir,
                        RegHashT<uint64_t,
                        rapmap::utils::SAInterval<IndexT>,
-                       rapmap::utils::KmerKeyHasher>& khash) {
-      std::ifstream hashStream(indexDir + "hash.bin", std::ios::binary);
-      khash.unserialize(typename spp_utils::pod_hash_serializer<uint64_t, rapmap::utils::SAInterval<IndexT>>(),
-			&hashStream);
-      return true;
+                       rapmap::utils::KmerKeyHasher>& khash) 
+{
+    // @CSE549 load the hash from the shared mem 
+    // laod the two vectors and make the hash
+    if (shared_mem::isSharedMem)
+    {
+        std::vector<uint64_t> hashKey;
+        std::vector<rapmap::utils::SAInterval<IndexT>> hashVal;
+        {
+          // logger->info("loading hash info");
+          // ScopedTimer timer;
+          std::cerr << "Inside SAIndex - shared_mem name = " << shared_mem::memName << std::endl;
+          shared_mem::loadBinaryVector(hashKey, shared_mem::memName + "hashkey");
+          shared_mem::loadBinaryVector(hashVal, shared_mem::memName + "hashval");
+
+          
+          for (int i = 0; i < 10; ++i)
+          {
+            std::cerr << hashKey[i] << "-" << hashVal[i].begin_ << "-" << hashVal[i].end_ << std::endl;
+          }
+          // recreating the map from the vectors
+          for (int i = 0; i < hashKey.size(); ++i)
+          {
+            khash[hashKey[i]] = hashVal[i];
+          }
+
+          // removes the sharedm mem segment after  each run of maper
+          // @TODO: remove this later
+          shared_mem::removeSharedMemoryWithPrefix(shared_mem::memName);
+        }
+    }
+
+    else
+    {
+        std::ifstream hashStream(indexDir + "hash.bin", std::ios::binary);
+        khash.unserialize(typename spp_utils::pod_hash_serializer<uint64_t, rapmap::utils::SAInterval<IndexT>>(),
+        &hashStream);
+    }
+      
+    return true;
 }
 
 template <typename IndexT>

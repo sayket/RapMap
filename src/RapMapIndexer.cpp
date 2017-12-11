@@ -818,7 +818,13 @@ int rapMapIndex(int argc, char* argv[]) {
     cmd.parse(argc, argv);
 
 	//test shared mem command
-	std::string memName=sharedMem.getValue();
+	// std::string memName=sharedMem.getValue();
+    // @CSE549
+    if (!sharedMem.getValue().empty())
+    {
+        shared_mem::memName=sharedMem.getValue();
+        shared_mem::isSharedMem = true;
+    }
 	//std::cerr<<"The shared memory location name is "<<memName<<'\n';
 
     // stupid parsing for now

@@ -46,7 +46,8 @@
 #include <cereal/types/vector.hpp>
 #include <cereal/types/string.hpp>
 #include <cereal/archives/binary.hpp>
-
+#include <cereal/archives/json.hpp>
+#include <cereal/types/map.hpp>
 
 
 
@@ -59,13 +60,13 @@ namespace shared_mem
 
 	// Name of the shared memory, we will use this name + file name to 
 	// create different segment name
-	static std::string memName;
+	extern std::string memName;
 
 	// Map to save the segment size of specific shared memory segment
-	static std::map<std::string, int> shmSegmentToSizeMap;
+	extern std::map<std::string, int> shmSegmentToSizeMap;
 
 	// A flag to check if the data is going to be written to or laoded from shared mem
-	static bool isSharedMem = false;
+	extern bool isSharedMem;
 
 
 	// Name of the files that we save in the shared memory
@@ -151,7 +152,7 @@ namespace shared_mem
 	{
 		int shmFd;
 		size_t dataSize = static_cast<std::size_t>( vec.size() * sizeof(T) );
-
+		std::cerr << "Data size = " << dataSize << std::endl;
 		// Size on the shared memory would be the minimum (SHM_PAGE_SIZE)4K size that can
 		// hold the vector data
 		off_t shmSize = static_cast<off_t>(((dataSize/SHM_PAGE_SIZE) + 1 ) * SHM_PAGE_SIZE);
@@ -197,11 +198,17 @@ namespace shared_mem
 	{
 		int shmFd;
 		size_t dataSize = static_cast<std::size_t>(shmSegmentToSizeMap[name]);
+        std::cerr << "Segment name = " << name << std::endl;
+        std::cerr << "Data size = " << dataSize << std::endl;
+		// size_t dataSize = 151208; //test
+		
 		int vecSize = dataSize/sizeof(T);
+        std::cerr << "Vector size = " << vecSize << std::endl;
 		// Size on the shared memory that was allocated to hold the vector data
 		off_t shmSize = static_cast<off_t>(((dataSize/SHM_PAGE_SIZE) + 1 ) * SHM_PAGE_SIZE);
 		// off_t shmSize = 4096; //just for test purpose
 
+        // void *shmBase = shared_mem::initSharedMemory(name, shmSize, shmFd, O_RDWR);
         void *shmBase = shared_mem::initSharedMemory(name, shmSize, shmFd);
 
         // @FIXME:
@@ -216,10 +223,12 @@ namespace shared_mem
 			// shmArchive(vec);
 			vec.resize(vecSize);
 			shmArchive.loadBinary(vec.data(), dataSize);
+			// shmArchive.loadBinary(vec.data(), 75604); //test
+			
 		}
 		
 		// close the shared memory segment from this process
-        shared_mem::deinitializeSharedMemory(shmBase, shmFd, shmSize);
+        // shared_mem::deinitializeSharedMemory(shmBase, shmFd, shmSize);
 	}
 
 	// @brief remove the shared memory segments
@@ -231,6 +240,32 @@ namespace shared_mem
 	int removeSharedMemoryWithPrefix(std::string prefix);
 
 
+
+	// @brief serializes a std map to json archive
+	// @param a std map, and name (path to save to)
+	// We save this in a file not in shared memory
+	template<typename T, typename F>
+	void saveJSONMap(std::map<T,F> & map, std::string name) 
+	{
+        std::ofstream mapStream(name);
+        {
+            cereal::JSONOutputArchive ar(mapStream);
+            ar(CEREAL_NVP(map));
+        }
+	}
+
+    // @brief deserializes a std map from json archive
+    // We save this in a file not in shared memory
+    // T&& map
+    template<typename T, typename F>
+    void loadJSONMap(std::map<T,F> & map, std::string name) 
+    {
+        std::ifstream mapStream(name);
+        {
+            cereal::JSONInputArchive ar(mapStream);
+            ar(CEREAL_NVP(map));
+        }
+    }
 
 
 	void display(char *prog, char *bytes, int n);

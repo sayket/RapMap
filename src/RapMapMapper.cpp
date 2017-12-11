@@ -56,6 +56,9 @@
 
 #include "tclap/CmdLine.h"
 
+
+
+
 /*extern "C" {
 #include "kseq.h"
 }
@@ -71,6 +74,9 @@
 #include "RapMapConfig.hpp"
 #include "ScopedTimer.hpp"
 #include "SpinLock.hpp"
+
+
+#include "shared_mem.hpp"
 
 // #define __DEBUG__
 // #define __TRACK_CORRECT__
@@ -977,7 +983,13 @@ int rapMapMap(int argc, char* argv[]) {
 	cmd.parse(argc, argv);
 
 	//test shared mem command
-	std::string memName=sharedMem.getValue();
+	// std::string memName=sharedMem.getValue();
+	// @CSE549
+	if (!sharedMem.getValue().empty())
+    {
+        shared_mem::memName=sharedMem.getValue();
+        shared_mem::isSharedMem = true;
+    }
 	//std::cerr<<"The shared memory location name is "<<memName<<'\n';
 
 	bool pairedEnd = (read1.isSet() or read2.isSet());

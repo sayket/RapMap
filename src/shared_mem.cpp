@@ -26,6 +26,13 @@
 
 namespace shared_mem
 {
+	// Defining the global variables
+	std::string memName;
+	bool isSharedMem = false;
+	std::map<std::string, int> shmSegmentToSizeMap;
+	
+
+
 	// Error message macro
 	#define SHM_ERROR_MSG(func, err_msg, err_no) std::cerr << "SHARED_MEM_ERROR in: " << \
 					 func << ": " << err_msg << " Error no:" << err_no << std::endl
@@ -34,7 +41,7 @@ namespace shared_mem
 	#define SHM_SUCCESS_MSG(func, msg) std::cerr << "SHARED_MEM_SUCCESS in: " << \
 					 func << ": " << msg << std::endl
 
-	
+
 	
 	void * initSharedMemory(std::string name, off_t size, int &shm_fd, int oflag, mode_t mode)
 	{

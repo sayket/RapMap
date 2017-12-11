@@ -18,10 +18,9 @@
 // You should have received a copy of the GNU General Public License
 // along with RapMap.  If not, see <http://www.gnu.org/licenses/>.
 //
-
+#include <cstdio>
 #include <algorithm>
 #include <cctype>
-#include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -435,36 +434,54 @@ bool buildHash(const std::string& outputDir, std::string& concatText,
    * Then save the vectors in the file
    * We can just load them using as vector then make a map out of it 
    */
-  std::vector<WordT> hashkey;
-  std::vector<rapmap::utils::SAInterval<IndexT>> hashVal;
+    if (shared_mem::isSharedMem)
+    {
+        std::vector<WordT> hashKey;
+        // std::vector<uint64_t> hashKey;
+        std::vector<rapmap::utils::SAInterval<IndexT>> hashVal;
 
-  // iteraate throuogh the map and load the key value to the vectors to save them
-  // using cereal
-  for( auto it=khash.begin(); it!=khash.end(); it++)
-  {
-    hashkey.push_back(it->first);
-    hashVal.push_back(it->second);
-  }
+        // iteraate throuogh the map and load the key value to the vectors to save them
+        // using cereal
+        for( auto it=khash.begin(); it!=khash.end(); it++)
+        {
+            hashKey.push_back(it->first);
+            hashVal.push_back(it->second);
 
-  // Now save them using the shared_mem vector saver
-  {
-    shared_mem::saveBinaryVector(hashkey, (shared_mem::memName + "hashkey"));
-    std::cerr << "\n shared::memory:: Saved the hashkey to shared memory \n";
-    shared_mem::saveBinaryVector(hashVal, (shared_mem::memName + "hashval"));
-    std::cerr << "\n shared::memory:: Saved the hashval to shared memory \n";
-  }
+            // std::cerr << (it->first) << "-" << (it->second) << std::endl;
+        }
 
-  shared_mem::removeSharedMemoryWithPrefix(shared_mem::memName);
+        // Now save them using the shared_mem vector saver
+        {
+            std::cerr << "Inside SAIndexer - shared_mem name = " << shared_mem::memName << std::endl;
+            shared_mem::saveBinaryVector(hashKey, (shared_mem::memName + "hashkey"));
+            std::cerr << hashKey.size()*sizeof(WordT) << "-" << hashKey.size() <<"-" << sizeof(WordT) << std::endl;
+            std::cerr << "\n shared::memory:: Saved the hashkey to shared memory \n";
+            shared_mem::saveBinaryVector(hashVal, (shared_mem::memName + "hashval"));
+            std::cerr << hashVal.size()*sizeof(rapmap::utils::SAInterval<IndexT>) << std::endl;
+            std::cerr << "\n shared::memory:: Saved the hashval to shared memory \n";
+        }
 
-  /*std::ofstream hashStream(outputDir + "hash.bin", std::ios::binary);
-  {
-    ScopedTimer timer;
-    std::cerr << "saving hash to disk . . . ";
-    khash.serialize(typename spp_utils::pod_hash_serializer<WordT, rapmap::utils::SAInterval<IndexT>>(),
-                    &hashStream);
-    std::cerr << "done\n";
-  }
-  hashStream.close();*/
+        // Test
+        for (int i = 0; i < 10; ++i)
+        {
+            // std::cerr << hashKey[i] << std::endl;
+            std::cerr << hashKey[i] << "-" << hashVal[i].begin_ << "-" << hashVal[i].end_ << std::endl;
+        }
+        // shared_mem::removeSharedMemoryWithPrefix(shared_mem::memName);
+    }
+    else
+    {
+        std::ofstream hashStream(outputDir + "hash.bin", std::ios::binary);
+        {
+            ScopedTimer timer;
+            std::cerr << "saving hash to disk . . . ";
+            khash.serialize(typename spp_utils::pod_hash_serializer<WordT, rapmap::utils::SAInterval<IndexT>>(),
+                            &hashStream);
+            std::cerr << "done\n";
+        }
+        hashStream.close();
+    }
+    
   return true;
 }
 
@@ -946,6 +963,10 @@ int rapMapSAIndex(int argc, char* argv[]) {
     archive(cereal::make_nvp("ReferenceFiles", transcriptFiles));
   }
   refInfoStream.close();
+
+  // @CSE549
+  // save the file name to size map shmSegmentToSizeMap to a json file
+  shared_mem::saveJSONMap(shared_mem::shmSegmentToSizeMap, "shm_segment_size.json");
 
   return 0;
 }
