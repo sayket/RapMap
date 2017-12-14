@@ -49,6 +49,9 @@
 #include <cereal/archives/json.hpp>
 #include <cereal/types/map.hpp>
 
+#include <dirent.h>
+#include <sys/types.h>
+
 
 
 namespace shared_mem
@@ -71,8 +74,7 @@ namespace shared_mem
 
 	// Name of the files that we save in the shared memory
 	const std::vector<std::string>fileName = {
-		"hashkey",
-		"hashval",
+		"hash",
         "sa"
 	};
 
@@ -129,6 +131,7 @@ namespace shared_mem
 	// @brief shm_base get output stream from a shared memory address
 	// @param shared meory address
 	std::ostream& getOutputStream(void *shm_base, off_t size);
+    std::ostream& getOutputStream(std::string name, off_t size);
 
 	// @brief returns the intput stream pointed by the name
 	// @param name is the name of the shared memory segment to read from
@@ -268,6 +271,11 @@ namespace shared_mem
         }
     }
 
+    // Loads a already saved index to shared memory for future use
+    void loadIndexToSharedMem(std::string inputDirName, std::string sharedMemPrefix);
+
+    // Saves a already shared memory index to ouptutDir for future use
+    void saveIndexToDisk(std::string outputDirName, std::string sharedMemPrefix);
 
 	void display(char *prog, char *bytes, int n);
 

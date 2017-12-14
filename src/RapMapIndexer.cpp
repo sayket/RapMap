@@ -868,6 +868,13 @@ int rapMapIndex(int argc, char* argv[]) {
     transcriptParserPtr->start();
     std::mutex iomutex;
     processTranscripts(transcriptParserPtr.get(), indexDir, iomutex);
+
+    // @CSE549
+    // save the file name to size map shmSegmentToSizeMap to a json file
+    if (shared_mem::isSharedMem)
+    {
+        shared_mem::saveJSONMap(shared_mem::shmSegmentToSizeMap, shared_mem::memName + "pseudo_shm_segment_size.json");
+    }
     return 0;
 }
 

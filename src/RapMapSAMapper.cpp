@@ -593,16 +593,17 @@ int rapMapSAMap(int argc, char* argv[]) {
     {
       shared_mem::memName=sharedMem.getValue();
       // std::cerr << "Inside SAMapper - shared_mem name = " << shared_mem::memName << std::endl;
+      // load the shared memory segment names to shmSegmentToSizeMap
+      shared_mem::loadJSONMap(shared_mem::shmSegmentToSizeMap, shared_mem::memName + "quasi_shm_segment_size.json");
       shared_mem::isSharedMem = true;
     }
 
-    // load the shared memory segment names to shmSegmentToSizeMap
-    shared_mem::loadJSONMap(shared_mem::shmSegmentToSizeMap, "shm_segment_size.json");
+    
     // test 
-    for(auto m:shared_mem::shmSegmentToSizeMap)
+    /*for(auto m:shared_mem::shmSegmentToSizeMap)
     {
       std::cerr << m.first <<"-" << m.second <<std::endl;
-    }
+    }*/
 
 	// std::string memName=sharedMem.getValue();
 	//std::cerr<<"The shared memory location name is "<<memName<<'\n';

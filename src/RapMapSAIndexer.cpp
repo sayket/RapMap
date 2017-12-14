@@ -469,7 +469,7 @@ bool buildHash(const std::string& outputDir, std::string& concatText,
    * Then save the vectors in the file
    * We can just load them using as vector then make a map out of it 
    */
-    if (shared_mem::isSharedMem)
+    /*if (shared_mem::isSharedMem)
     {
         std::vector<WordT> hashKey;
         // std::vector<uint64_t> hashKey;
@@ -503,6 +503,46 @@ bool buildHash(const std::string& outputDir, std::string& concatText,
             std::cerr << hashKey[i] << "-" << hashVal[i].begin_ << "-" << hashVal[i].end_ << std::endl;
         }
         // shared_mem::removeSharedMemoryWithPrefix(shared_mem::memName);
+    }*/
+    if (shared_mem::isSharedMem)
+    {
+      int shmFd;
+      size_t dataSize = static_cast<std::size_t>((2) *khash.size() * (sizeof(uint64_t) + sizeof(IndexT)) );
+      std::cerr << "Data size = " << dataSize << std::endl;
+      // Size on the shared memory would be the minimum (SHM_PAGE_SIZE)4K size that can
+      // hold the vector data
+      off_t shmSize = static_cast<off_t>(((dataSize/shared_mem::SHM_PAGE_SIZE) + 1 ) * shared_mem::SHM_PAGE_SIZE);
+
+      void *shmBase = shared_mem::initSharedMemory((shared_mem::memName + "hash"), shmSize, shmFd);
+
+      // @FIXME:
+      // Converting a c file descriptor to c++ stream
+      // We are using a GNU compiler dependent method, 
+      // won't work with other compiler
+      __gnu_cxx::stdio_filebuf<char> shmFileBuf(shmFd, std::ios::out);
+      {
+          std::ostream shmStream(&shmFileBuf);
+          // create cereal::BinaryOutputArchive object and save the binary to the shared memory
+          ScopedTimer timer;
+          std::cerr << "saving hash to disk . . . ";
+          // test
+          int k=0;
+          /*for (auto it = khash.begin(); it!= khash.end(); it++)
+          {
+            if (k == 5)
+            {
+              break;
+            }
+            std::cerr << it->first << "----" << it->second.begin_ << std::endl;
+            k++;
+          }*/
+          khash.serialize(typename spp_utils::pod_hash_serializer<WordT, rapmap::utils::SAInterval<IndexT>>(),
+                          &shmStream);
+          std::cerr << "done\n";
+          shmStream.flush();
+      }
+
+      shared_mem::shmSegmentToSizeMap[(shared_mem::memName + "hash")] = dataSize;
     }
     else
     {
@@ -774,30 +814,79 @@ void indexTranscriptsSA(ParserT* parser,
   fclose(rsFile);
   bit_array_free(bitArray);
 
-  std::ofstream seqStream(outputDir + "txpInfo.bin", std::ios::binary);
+  // @CSE549
+
+  /*if (shared_mem::isSharedMem)
   {
-    ScopedTimer timer;
-    std::cerr << "Writing sequence data to file . . . ";
-    cereal::BinaryOutputArchive seqArchive(seqStream);
-    seqArchive(transcriptNames);
-    if (largeIndex) {
-      seqArchive(transcriptStarts);
-    } else {
-      std::vector<int32_t> txpStarts(transcriptStarts.size(), 0);
-      size_t numTranscriptStarts = transcriptStarts.size();
-      for (size_t i = 0; i < numTranscriptStarts; ++i) {
-        txpStarts[i] = static_cast<int32_t>(transcriptStarts[i]);
+    size_t totSize = 
+    std::ostream seqStream = shared_mem::getOutputStream((shared_mem::memName + "txpInfo"));
+    {
+      ScopedTimer timer;
+      std::cerr << "Writing sequence data to file . . . ";
+      cereal::BinaryOutputArchive seqArchive(seqStream);
+
+      // std::vector<std::string> transcriptNames;
+      // std::vector<int64_t> transcriptStarts;
+      seqArchive.saveBinary(transcriptNames.data(), transcriptNames.size() * sizeof());
+      
+      if (largeIndex) 
+      {
+        seqArchive(transcriptStarts);
+      } 
+      else 
+      {
+        std::vector<int32_t> txpStarts(transcriptStarts.size(), 0);
+        size_t numTranscriptStarts = transcriptStarts.size();
+        for (size_t i = 0; i < numTranscriptStarts; ++i) {
+          txpStarts[i] = static_cast<int32_t>(transcriptStarts[i]);
+        }
+        transcriptStarts.clear();
+        transcriptStarts.shrink_to_fit();
+        seqArchive(txpStarts); 
+        
       }
-      transcriptStarts.clear();
-      transcriptStarts.shrink_to_fit();
-      { seqArchive(txpStarts); }
+      // seqArchive(positionIDs);
+      seqArchive(concatText);
+      seqArchive(completeLengths);
+      std::cerr << "done\n";
     }
-    // seqArchive(positionIDs);
-    seqArchive(concatText);
-    seqArchive(completeLengths);
-    std::cerr << "done\n";
   }
-  seqStream.close();
+  else*/
+  {
+    std::ofstream seqStream(outputDir + "txpInfo.bin", std::ios::binary);
+    {
+      ScopedTimer timer;
+      std::cerr << "Writing sequence data to file . . . ";
+      cereal::BinaryOutputArchive seqArchive(seqStream);
+
+      //@CSE549 Test 
+      std::cerr << "trancript name len = " << transcriptNames[0] << " = " << transcriptNames.size() << std::endl;
+
+      seqArchive(transcriptNames);
+      
+      if (largeIndex) 
+      {
+        seqArchive(transcriptStarts);
+      } 
+      else 
+      {
+        std::vector<int32_t> txpStarts(transcriptStarts.size(), 0);
+        size_t numTranscriptStarts = transcriptStarts.size();
+        for (size_t i = 0; i < numTranscriptStarts; ++i) {
+          txpStarts[i] = static_cast<int32_t>(transcriptStarts[i]);
+        }
+        transcriptStarts.clear();
+        transcriptStarts.shrink_to_fit();
+        seqArchive(txpStarts); 
+        
+      }
+      // seqArchive(positionIDs);
+      seqArchive(concatText);
+      seqArchive(completeLengths);
+      std::cerr << "done\n";
+    }
+    seqStream.close();
+  }
 
   // clear stuff we no longer need
   // positionIDs.clear();
@@ -1001,7 +1090,11 @@ int rapMapSAIndex(int argc, char* argv[]) {
 
   // @CSE549
   // save the file name to size map shmSegmentToSizeMap to a json file
-  shared_mem::saveJSONMap(shared_mem::shmSegmentToSizeMap, "shm_segment_size.json");
+  if (shared_mem::isSharedMem)
+  {
+    shared_mem::saveJSONMap(shared_mem::shmSegmentToSizeMap, shared_mem::memName + "quasi_shm_segment_size.json");
+  }
+  
 
   return 0;
 }

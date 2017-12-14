@@ -157,7 +157,28 @@ namespace shared_mem
 		return shmStream;
 	}
 
+	std::ostream& getOutputStream(std::string name, off_t size)
+	{
+		int shmFd;
+		// size_t dataSize = static_cast<std::size_t>( vec.size() * sizeof(T) );
+		std::cerr << "Data size = " << size << std::endl;
+		// Size on the shared memory would be the minimum (SHM_PAGE_SIZE)4K size that can
+		// hold the vector data
+		off_t shmSize = static_cast<off_t>(((size/shared_mem::SHM_PAGE_SIZE) + 1 ) * shared_mem::SHM_PAGE_SIZE);
 
+        void *shmBase = shared_mem::initSharedMemory(name, shmSize, shmFd);
+
+        // @FIXME:
+        // Converting a c file descriptor to c++ stream
+        // We are using a GNU compiler dependent method, 
+        // won't work with other compiler
+        __gnu_cxx::stdio_filebuf<char> shmFileBuf(shmFd, std::ios::out);
+		
+		std::ostream shmStream(&shmFileBuf);
+		// shmStream.flush();
+        shared_mem::shmSegmentToSizeMap[name] = size;
+        return shmStream;
+	}
 
 	std::istream& getInputStream(void *shm_base, off_t size)
 	{
@@ -181,6 +202,118 @@ namespace shared_mem
 	}
 
 
+	void loadIndexToSharedMem(std::string inputDirName, std::string sharedMemPrefix)
+	{
+		struct dirent *entry;
+	    DIR *dir = opendir(inputDirName.c_str());
+	    if (dir == NULL) {
+	        return;
+	    }
+
+	    while ((entry = readdir(dir)) != NULL) 
+	    {
+	    	/*if ((std::string(entry->d_name) == ".") || (std::string(entry->d_name) == ".."))
+	    	{
+	    		continue;
+	    	}*/
+	    	if (std::string(entry->d_name) == "hash.bin")
+	    	{
+
+	    		std::ifstream infile (inputDirName + std::string(entry->d_name), std::ifstream::binary);
+				// get size of file
+				infile.seekg (0,infile.end);
+				long size = infile.tellg();
+				infile.seekg (0);
+
+
+				std::string name = sharedMemPrefix + "hash";
+				shared_mem::shmSegmentToSizeMap[name] = size;
+
+				std::cerr << "Size == " << entry->d_name << "-" << size << std::endl;
+				std::cerr << "Size == " << name << "-" << shared_mem::shmSegmentToSizeMap[name] << std::endl;
+
+				
+				int shmFd;
+				size_t dataSize = static_cast<std::size_t>(size);
+		        std::cerr << "Segment name = " << name << std::endl;
+		        std::cerr << "Data size = " << dataSize << std::endl;
+				// Size on the shared memory that was allocated to hold the vector data
+				off_t shmSize = static_cast<off_t>(((dataSize/shared_mem::SHM_PAGE_SIZE) + 1 ) * shared_mem::SHM_PAGE_SIZE);
+		        void *shmBase = shared_mem::initSharedMemory(name, shmSize, shmFd);
+		        // read content of infile to shared memory
+				infile.read ((char *)shmBase,size);
+	    	}
+	    	else if (std::string(entry->d_name) == "sa.bin")
+	    	{
+	    		std::ifstream infile (inputDirName + std::string(entry->d_name), std::ifstream::binary);
+				// get size of file
+				infile.seekg (0,infile.end);
+				uint64_t size = infile.tellg();
+				infile.seekg (0);
+
+				std::string name = sharedMemPrefix + "sa";
+				shared_mem::shmSegmentToSizeMap[name] = size;
+
+				std::cerr << "Size == " << entry->d_name << "-" << size << std::endl;
+				std::cerr << "Size == " << name << "-" << shared_mem::shmSegmentToSizeMap[name] << std::endl;
+
+				int shmFd;
+				size_t dataSize = static_cast<std::size_t>(size);
+		        std::cerr << "Segment name = " << name << std::endl;
+		        std::cerr << "Data size = " << dataSize << std::endl;
+				// Size on the shared memory that was allocated to hold the vector data
+				off_t shmSize = static_cast<off_t>(((dataSize/shared_mem::SHM_PAGE_SIZE) + 1 ) * shared_mem::SHM_PAGE_SIZE);
+		        void *shmBase = shared_mem::initSharedMemory(name, shmSize, shmFd);
+		        // read content of infile to shared memory
+				infile.read ((char *)shmBase,size);
+	    	}
+	        // printf("%s\n",entry->d_name);
+	    }
+
+	    shared_mem::saveJSONMap(shared_mem::shmSegmentToSizeMap, shared_mem::memName + "quasi_shm_segment_size.json");
+	    closedir(dir);
+		
+	}
+
+
+	void saveIndexToDisk(std::string outputDirName, std::string sharedMemPrefix)
+	{
+		std::string segmentName = (sharedMemPrefix + "hash");
+		// if (segmentName == (sharedMemPrefix + "hash"))
+    	{
+    		std::ofstream outfile ((outputDirName + "/" + "hash.bin"),std::ofstream::binary);
+
+			uint64_t size = shared_mem::shmSegmentToSizeMap[(sharedMemPrefix + "hash")];
+
+			int shmFd;
+			size_t dataSize = static_cast<std::size_t>(size);
+	        std::cerr << "Segment name = " << segmentName << std::endl;
+	        std::cerr << "Data size = " << dataSize << std::endl;
+			// Size on the shared memory that was allocated to hold the vector data
+			off_t shmSize = static_cast<off_t>(((dataSize/shared_mem::SHM_PAGE_SIZE) + 1 ) * shared_mem::SHM_PAGE_SIZE);
+	        void *shmBase = shared_mem::initSharedMemory(segmentName, shmSize, shmFd);
+	        // read content of infile to shared memory
+			outfile.write ((char*)shmBase,size);
+    	}
+    	// else if (segmentName == (sharedMemPrefix + "sa"))
+    	segmentName.clear();
+    	segmentName = (sharedMemPrefix + "sa");
+    	{
+    		std::ofstream outfile ((outputDirName + "/" +"sa.bin"),std::ofstream::binary);
+
+			uint64_t size = shared_mem::shmSegmentToSizeMap[(sharedMemPrefix + "sa")];
+
+			int shmFd;
+			size_t dataSize = static_cast<std::size_t>(size);
+	        std::cerr << "Segment name = " << segmentName << std::endl;
+	        std::cerr << "Data size = " << dataSize << std::endl;
+			// Size on the shared memory that was allocated to hold the vector data
+			off_t shmSize = static_cast<off_t>(((dataSize/shared_mem::SHM_PAGE_SIZE) + 1 ) * shared_mem::SHM_PAGE_SIZE);
+	        void *shmBase = shared_mem::initSharedMemory(segmentName, shmSize, shmFd);
+	        // read content of infile to shared memory
+			outfile.write ((char*)shmBase,size);
+    	}
+	}
 	// @for test purpose
 	void display(char *prog, char *bytes, int n)
 	{

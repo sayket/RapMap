@@ -28,10 +28,13 @@
 #include "RapMapConfig.hpp"
 #include "IndexHeader.hpp"
 
+#include "RapMapSharedMemIndexLoader.hpp"
+
 int rapMapIndex(int argc, char* argv[]);
 int rapMapSAIndex(int argc, char* argv[]);
 int rapMapMap(int argc, char* argv[]);
 int rapMapSAMap(int argc, char* argv[]);
+int rapMapSharedMemIndexLoader(int argc, char* argv[]);
 
 void printUsage() {
     std::string versionString = rapmap::version;
@@ -45,6 +48,7 @@ There are currently 4 RapMap subcommands
     pseudomap     --- map reads using a k-mer-based index
     quasiindex --- builds a suffix array-based (SA) index
     quasimap   --- map reads using the SA-based index
+    manageshm   --- loads, saves or removes data to/from shared memory from/to file directory
 
 Run a corresponding command "rapmap <cmd> -h" for
 more information on each of the possible RapMap
@@ -86,7 +90,11 @@ int main(int argc, char* argv[]) {
         return rapMapMap(argc - 1, args.data());
     } else if (std::string(argv[1]) == "quasimap") {
         return rapMapSAMap(argc - 1, args.data());
-    } else {
+    } else if (std::string(argv[1]) == "manageshm")
+    {
+        return rapMapSharedMemIndexLoader(argc - 1, args.data());
+    }
+    else {
         std::cerr << "the command " << argv[1]
                   << " is not yet implemented\n";
         return 1;

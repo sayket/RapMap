@@ -2414,6 +2414,7 @@ public:
     template <typename ValueSerializer, typename OUTPUT>
     bool serialize(ValueSerializer serializer, OUTPUT *fp)
     {
+        // @CSE549
         if (!write_metadata(fp))
             return false;
         for (const_ne_iterator it = ne_begin(); it != ne_end(); ++it)

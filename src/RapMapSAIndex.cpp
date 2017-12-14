@@ -78,7 +78,7 @@ bool loadHashFromIndex(const std::string& indexDir,
 {
     // @CSE549 load the hash from the shared mem 
     // laod the two vectors and make the hash
-    if (shared_mem::isSharedMem)
+    /*if (shared_mem::isSharedMem)
     {
         std::vector<uint64_t> hashKey;
         std::vector<rapmap::utils::SAInterval<IndexT>> hashVal;
@@ -104,8 +104,46 @@ bool loadHashFromIndex(const std::string& indexDir,
           // @TODO: remove this later
           shared_mem::removeSharedMemoryWithPrefix(shared_mem::memName);
         }
-    }
+    }*/
+    if (shared_mem::isSharedMem)
+    {
+      int shmFd;
+      size_t dataSize = static_cast<std::size_t>( shared_mem::shmSegmentToSizeMap[(shared_mem::memName + "hash")] );
+      std::cerr << "Data size = " << dataSize << std::endl;
+      // Size on the shared memory would be the minimum (SHM_PAGE_SIZE)4K size that can
+      // hold the vector data
+      off_t shmSize = static_cast<off_t>(((dataSize/shared_mem::SHM_PAGE_SIZE) + 1 ) * shared_mem::SHM_PAGE_SIZE);
 
+      void *shmBase = shared_mem::initSharedMemory((shared_mem::memName + "hash"), shmSize, shmFd);
+
+      // @FIXME:
+      // Converting a c file descriptor to c++ stream
+      // We are using a GNU compiler dependent method, 
+      // won't work with other compiler
+      __gnu_cxx::stdio_filebuf<char> shmFileBuf(shmFd, std::ios::in);
+      {
+          std::istream shmStream(&shmFileBuf);
+          // create cereal::BinaryOutputArchive object and save the binary to the shared memory
+          // ScopedTimer timer;
+          std::cerr << "saving hash to disk . . . ";
+          khash.unserialize(typename spp_utils::pod_hash_serializer<uint64_t, rapmap::utils::SAInterval<IndexT>>(),
+                  &shmStream);
+          std::cerr << "done\n";
+          // shmStream.flush();
+      }
+
+      // test
+      /*int k=0;
+      for (auto it = khash.begin(); it!= khash.end(); it++)
+      {
+        if (k == 5)
+        {
+          break;
+        }
+        std::cerr << it->first << "----" << it->second.begin_ << std::endl;
+        k++;
+      }*/
+    }
     else
     {
         std::ifstream hashStream(indexDir + "hash.bin", std::ios::binary);

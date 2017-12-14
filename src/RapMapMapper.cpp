@@ -989,6 +989,10 @@ int rapMapMap(int argc, char* argv[]) {
     {
         shared_mem::memName=sharedMem.getValue();
         shared_mem::isSharedMem = true;
+        if (shared_mem::isSharedMem)
+	    {
+	        shared_mem::loadJSONMap(shared_mem::shmSegmentToSizeMap, shared_mem::memName + "pseudo_shm_segment_size.json");
+	    }
     }
 	//std::cerr<<"The shared memory location name is "<<memName<<'\n';
 
