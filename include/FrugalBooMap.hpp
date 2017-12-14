@@ -15,6 +15,7 @@
 
 #include <sys/stat.h>
 
+#include "shared_mem.hpp"
 
 // adapted from :
 // http://stackoverflow.com/questions/34875315/implementation-my-own-list-and-iterator-stl-c
@@ -210,6 +211,97 @@ public:
                     overflow_.serialize(typename spp_utils::pod_hash_serializer<IndexT, IndexT>(), &valStream);
                 }
                 valStream.close();
+            }
+        }
+    }
+
+    // @CSE549 
+    // shared memory save of the min perfect hash
+    void save(const std::string& ofileBase, bool isSharedMem) 
+    {
+        if (built_) 
+        {
+            
+            std::string hashFN = ofileBase + ".bph";
+            {                       
+                int shmFd;
+
+                // @TODO: We can use total bit set size in bytes
+                // We are allocating twice the size
+                size_t dataSize = static_cast<std::size_t>( 2*boophf_->totalBitSize()/8);
+                std::cerr << "Data size = " << dataSize << std::endl;
+                // Size on the shared memory would be the minimum (SHM_PAGE_SIZE)4K size that can
+                // hold the vector data
+    
+                // @FIXME: Allocating twice more data than needed, probably need to cut it off
+                off_t shmSize = static_cast<off_t>(((2*dataSize/shared_mem::SHM_PAGE_SIZE) + 1 ) * shared_mem::SHM_PAGE_SIZE);
+    
+                void *shmBase = shared_mem::initSharedMemory(hashFN, shmSize, shmFd);
+    
+                // @FIXME:
+                // Converting a c file descriptor to c++ stream
+                // We are using a GNU compiler dependent method, 
+                // won't work with other compiler
+                __gnu_cxx::stdio_filebuf<char> shmFileBuf(shmFd, std::ios::out);
+                {
+                    // save the perfect hash function
+                    std::ostream shmStream(&shmFileBuf);
+                    /*if (!shmStream.is_open()) {
+                        std::cerr << "BooM: unable to open output file [" << hashFN << "]; exiting!\n";
+                        std::exit(1);
+                    }*/
+                    boophf_->save(shmStream);
+                    shmStream.flush();
+                }
+                
+                // close the shared memory segment from this process
+                shared_mem::deinitializeSharedMemory(shmBase, shmFd, shmSize);
+                shared_mem::shmSegmentToSizeMap[hashFN] = dataSize;
+            }
+
+            // and the values
+            std::string dataFN = ofileBase + ".val";
+            {                       
+                int shmFd;
+                size_t dataSize = static_cast<std::size_t>( (data_.size() * sizeof(IndexT))
+                                                            + (lens_.size() * sizeof(uint8_t))
+                                                            +  (overflow_.size() * 2.2 *sizeof(IndexT))  );
+                std::cerr << "Data size = " << dataSize << std::endl;
+                // Size on the shared memory would be the minimum (SHM_PAGE_SIZE)4K size that can
+                // hold the vector data
+    
+                // @FIXME: Allocating twice more data than needed, probably need to cut it off
+                off_t shmSize = static_cast<off_t>(((dataSize/shared_mem::SHM_PAGE_SIZE) + 1 ) * shared_mem::SHM_PAGE_SIZE);
+    
+                void *shmBase = shared_mem::initSharedMemory(dataFN, shmSize, shmFd);
+    
+                // @FIXME:
+                // Converting a c file descriptor to c++ stream
+                // We are using a GNU compiler dependent method, 
+                // won't work with other compiler
+                __gnu_cxx::stdio_filebuf<char> shmFileBuf(shmFd, std::ios::out);
+                {
+                    // save the perfect hash function
+                    std::ostream shmStream(&shmFileBuf);
+                    /*if (!shmStream.is_open()) {
+                        std::cerr << "BooM: unable to open output file [" << dataFN << "]; exiting!\n";
+                        std::exit(1);
+                    }
+                    else*/
+                    {
+                        cereal::BinaryOutputArchive shmArchive(shmStream);
+                        shmArchive.saveBinary(data_.data(), (data_.size() * sizeof(IndexT)));
+                        shmArchive.saveBinary(lens_.data(), (lens_.size() * sizeof(uint8_t)));
+                        // @TODO: I might decide to serialize this part using two vectors of key anf val
+                        // Not use the serialize function, after all it's a map
+                        overflow_.serialize(typename spp_utils::pod_hash_serializer<IndexT, IndexT>(), &shmStream);
+                    }
+                    shmStream.flush();
+                }
+                
+                // close the shared memory segment from this process
+                shared_mem::deinitializeSharedMemory(shmBase, shmFd, shmSize);
+                shared_mem::shmSegmentToSizeMap[dataFN] = dataSize;
             }
         }
     }

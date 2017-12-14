@@ -92,8 +92,7 @@ bool buildSA(const std::string& outputDir, std::string& concatText, size_t tlen,
   using UIndexT = uint64_t;
   bool success{false};
 
-  std::ofstream saStream(outputDir + "sa.bin", std::ios::binary);
-  {
+  
     ScopedTimer timer;
     SA.resize(tlen, 0);
     IndexT textLen = static_cast<IndexT>(tlen);
@@ -105,22 +104,34 @@ bool buildSA(const std::string& outputDir, std::string& concatText, size_t tlen,
     success = (ret == 0);
     if (success) {
       std::cerr << "success\n";
+      // @CSE549
+      if (shared_mem::isSharedMem)
       {
-        ScopedTimer timer2;
-        std::cerr << "saving to disk . . . ";
-        cereal::BinaryOutputArchive saArchive(saStream);
-        saArchive(SA);
+        std::cerr << "saving to shared_mem . . . \n";
+        std::cerr << "SA vector size = " << SA.size() << "element 0 = " << SA[0] << std::endl;
+        shared_mem::saveBinaryVector(SA,(shared_mem::memName + "sa"));
         std::cerr << "done\n";
       }
+      else
+      {
+        std::ofstream saStream(outputDir + "sa.bin", std::ios::binary);
+        {
+          ScopedTimer timer2;
+          std::cerr << "saving to disk . . . ";
+          cereal::BinaryOutputArchive saArchive(saStream);
+          saArchive(SA);
+          std::cerr << "done\n";
+        }
+        saStream.close();
+      }
+      
     } else {
       std::cerr << "FAILURE: return code from libdivsufsort64() was " << ret
                 << "\n";
-      saStream.close();
+      // saStream.close();
       std::exit(1);
     }
     std::cerr << "done\n";
-  }
-  saStream.close();
   return success;
 }
 
@@ -208,7 +219,15 @@ bool buildPerfectHash(const std::string& outputDir, std::string& concatText,
   std::cout << "\ndone.\n";
   std::string outputPrefix = outputDir + "hash_info";
   std::cout << "saving the perfect hash and SA intervals to disk ... ";
-  intervals.save(outputPrefix);
+    /*if (shared_mem::isSharedMem)
+    {
+        intervals.save(shared_mem::memName + "hash_info", shared_mem::isSharedMem);
+    }
+    else*/
+    {
+        intervals.save(outputPrefix);
+    }
+  
   std::cout << "done.\n";
 
   return true;
@@ -222,7 +241,7 @@ bool buildSA(const std::string& outputDir, std::string& concatText, size_t tlen,
   using UIndexT = uint32_t;
   bool success{false};
 
-  std::ofstream saStream(outputDir + "sa.bin", std::ios::binary);
+  // std::ofstream saStream(outputDir + "sa.bin", std::ios::binary);
   {
     ScopedTimer timer;
     SA.resize(tlen, 0);
@@ -233,24 +252,40 @@ bool buildSA(const std::string& outputDir, std::string& concatText, size_t tlen,
         SA.data(), tlen);
 
     success = (ret == 0);
-    if (success) {
+    if (success) 
+    {
       std::cerr << "success\n";
+      // @CSE549
+      if (shared_mem::isSharedMem)
       {
-        ScopedTimer timer2;
-        std::cerr << "saving to disk . . . ";
-        cereal::BinaryOutputArchive saArchive(saStream);
-        saArchive(SA);
+        std::cerr << "saving to shared_mem . . . \n";
+        std::cerr << "SA vector size = " << SA.size() << "element 0 = " << SA[0] << std::endl;
+        shared_mem::saveBinaryVector(SA,(shared_mem::memName + "sa"));
         std::cerr << "done\n";
       }
-    } else {
+      else
+      {
+        std::ofstream saStream(outputDir + "sa.bin", std::ios::binary);
+        {
+          ScopedTimer timer2;
+          std::cerr << "saving to disk . . . ";
+          cereal::BinaryOutputArchive saArchive(saStream);
+          saArchive(SA);
+          std::cerr << "done\n";
+        }
+        saStream.close();
+      }
+      
+    } 
+    else {
       std::cerr << "FAILURE: return code from libdivsufsort() was " << ret
                 << "\n";
-      saStream.close();
+      // saStream.close();
       std::exit(1);
     }
     std::cerr << "done\n";
   }
-  saStream.close();
+  
   return success;
 }
 

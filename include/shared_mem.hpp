@@ -72,7 +72,8 @@ namespace shared_mem
 	// Name of the files that we save in the shared memory
 	const std::vector<std::string>fileName = {
 		"hashkey",
-		"hashval"
+		"hashval",
+        "sa"
 	};
 
 	// We allocate extra 4K space in shared memory just to make sure we got
@@ -155,7 +156,7 @@ namespace shared_mem
 		std::cerr << "Data size = " << dataSize << std::endl;
 		// Size on the shared memory would be the minimum (SHM_PAGE_SIZE)4K size that can
 		// hold the vector data
-		off_t shmSize = static_cast<off_t>(((dataSize/SHM_PAGE_SIZE) + 1 ) * SHM_PAGE_SIZE);
+		off_t shmSize = static_cast<off_t>(((dataSize/shared_mem::SHM_PAGE_SIZE) + 1 ) * shared_mem::SHM_PAGE_SIZE);
 
         void *shmBase = shared_mem::initSharedMemory(name, shmSize, shmFd);
 
@@ -179,13 +180,13 @@ namespace shared_mem
         // save the information about the size of the data in a json file
         // We need this info to open the shared memory for loading the data in the future
 
-        // @TODO: We may want to write this data at the end of the indexer process
+        // @Done: We may want to write this data at the end of the indexer process
         // We can use a json file to write the data
         // On the meantime during the indexer process we can save this data in a map
 
-        // @TODO: Similarly we can load this map from the json file at the 
+        // @Done: Similarly we can load this map from the json file at the 
         // beginning of the mapping process
-        shmSegmentToSizeMap[name] = dataSize;
+        shared_mem::shmSegmentToSizeMap[name] = dataSize;
 	}
 
 	// @brief loads a std::vector 'vec' data from shared memory name 'name' 
@@ -197,7 +198,7 @@ namespace shared_mem
 	void loadBinaryVector( std::vector<T,A> & vec, std::string name ) 
 	{
 		int shmFd;
-		size_t dataSize = static_cast<std::size_t>(shmSegmentToSizeMap[name]);
+		size_t dataSize = static_cast<std::size_t>(shared_mem::shmSegmentToSizeMap[name]);
         std::cerr << "Segment name = " << name << std::endl;
         std::cerr << "Data size = " << dataSize << std::endl;
 		// size_t dataSize = 151208; //test
@@ -205,7 +206,7 @@ namespace shared_mem
 		int vecSize = dataSize/sizeof(T);
         std::cerr << "Vector size = " << vecSize << std::endl;
 		// Size on the shared memory that was allocated to hold the vector data
-		off_t shmSize = static_cast<off_t>(((dataSize/SHM_PAGE_SIZE) + 1 ) * SHM_PAGE_SIZE);
+		off_t shmSize = static_cast<off_t>(((dataSize/shared_mem::SHM_PAGE_SIZE) + 1 ) * shared_mem::SHM_PAGE_SIZE);
 		// off_t shmSize = 4096; //just for test purpose
 
         // void *shmBase = shared_mem::initSharedMemory(name, shmSize, shmFd, O_RDWR);

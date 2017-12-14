@@ -118,9 +118,43 @@ bool loadHashFromIndex(const std::string& indexDir,
 
 template <typename IndexT>
 bool loadHashFromIndex(const std::string& indexDir,
-		       PerfectHashT<uint64_t, rapmap::utils::SAInterval<IndexT>> & h) {
-    std::string hashBase = indexDir + "hash_info";
-    h.load(hashBase);
+		       PerfectHashT<uint64_t, rapmap::utils::SAInterval<IndexT>> & h) 
+{
+    
+    // @CSE549 load the hash from the shared mem 
+    // laod the two vectors and make the hash
+    /*if (shared_mem::isSharedMem)
+    {
+        std::vector<uint64_t> hashKey;
+        std::vector<rapmap::utils::SAInterval<IndexT>> hashVal;
+        {
+            // logger->info("loading hash info");
+            // ScopedTimer timer;
+            std::cerr << "Inside SAIndex, perfect hash - shared_mem name = " << shared_mem::memName << std::endl;
+            shared_mem::loadBinaryVector(hashKey, shared_mem::memName + "hashkey");
+            shared_mem::loadBinaryVector(hashVal, shared_mem::memName + "hashval");
+
+            for (int i = 0; i < 10; ++i)
+            {
+                std::cerr << hashKey[i] << "-" << hashVal[i].begin_ << "-" << hashVal[i].end_ << std::endl;
+            }
+            // recreating the map from the vectors
+            for (int i = 0; i < hashKey.size(); ++i)
+            {
+                h[hashKey[i]] = hashVal[i];
+            }
+
+            // removes the sharedm mem segment after  each run of maper
+            // @TODO: remove this later
+            shared_mem::removeSharedMemoryWithPrefix(shared_mem::memName);
+        }
+    }
+
+    else*/
+    {
+        std::string hashBase = indexDir + "hash_info";
+        h.load(hashBase);
+    }
     return true;
 }
 
@@ -155,14 +189,24 @@ bool RapMapSAIndex<IndexT, HashT>::load(const std::string& indDir) {
 	return loadHashFromIndex(indDir, khash);
     });
 
-    std::ifstream saStream(indDir + "sa.bin");
+    if (shared_mem::isSharedMem)
     {
-        logger->info("Loading Suffix Array ");
-        cereal::BinaryInputArchive saArchive(saStream);
-        saArchive(SA);
-        //saArchive(LCP);
+      logger->info("Loading Suffix Array from shared_mem");
+      shared_mem::loadBinaryVector(SA,(shared_mem::memName + "sa"));
+      std::cerr << "SA vector size = " << SA.size() << "element 0 = " << SA[0] << std::endl;
     }
-    saStream.close();
+    else
+    {
+      std::ifstream saStream(indDir + "sa.bin");
+      {
+          logger->info("Loading Suffix Array ");
+          cereal::BinaryInputArchive saArchive(saStream);
+          saArchive(SA);
+          //saArchive(LCP);
+      }
+      saStream.close();
+    }
+    
 
     std::ifstream seqStream(indDir + "txpInfo.bin");
     {
