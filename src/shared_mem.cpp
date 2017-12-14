@@ -110,7 +110,6 @@ namespace shared_mem
 		int ret = shm_unlink(name.c_str());
 		if (ret == -1)
 		{
-			// std::cerr << "Unable to unlink the Shared memory segment: " << strerror(errno) << std::endl;
 			SHM_ERROR_MSG("removeSharedMemory", "Unable to unlink the Shared memory segment", errno);
 		}
 		SHM_SUCCESS_MSG("removeSharedMemory", name + " removed");
@@ -130,77 +129,6 @@ namespace shared_mem
 	}
 
 
-	std::ostream& getOutputStream(void *shm_base, off_t size)
-	{
-		FILE *stream;
-		off_t memSize = size + extraSpaceInSharedMem;
-		// open the shared memory segment as a file
-		stream = fmemopen(shm_base, memSize, "w");
-		if (stream == NULL)
-		{
-		  // std::cerr << "Error opening the shared memory: " << strerror(errno) << std::endl;
-			SHM_ERROR_MSG("getOutputStream", "Error opening the shared memory", errno);
-		}
-
-		// Converting a c FILE * to c++ stream
-		// We are using a GNU compiler dependent method, 
-		// won't work with other compiler
-		__gnu_cxx::stdio_filebuf<char> shmFileBuf(stream, std::ios::out);
-		std::ostream shmStream(&shmFileBuf);
-
-		std::cerr << "writing something on the ostream " << std::endl;
-
-		shmStream << 4;
-
-		std::cerr << "writing done on the ostream " << std::endl;
-
-		return shmStream;
-	}
-
-	std::ostream& getOutputStream(std::string name, off_t size)
-	{
-		int shmFd;
-		// size_t dataSize = static_cast<std::size_t>( vec.size() * sizeof(T) );
-		std::cerr << "Data size = " << size << std::endl;
-		// Size on the shared memory would be the minimum (SHM_PAGE_SIZE)4K size that can
-		// hold the vector data
-		off_t shmSize = static_cast<off_t>(((size/shared_mem::SHM_PAGE_SIZE) + 1 ) * shared_mem::SHM_PAGE_SIZE);
-
-        void *shmBase = shared_mem::initSharedMemory(name, shmSize, shmFd);
-
-        // @FIXME:
-        // Converting a c file descriptor to c++ stream
-        // We are using a GNU compiler dependent method, 
-        // won't work with other compiler
-        __gnu_cxx::stdio_filebuf<char> shmFileBuf(shmFd, std::ios::out);
-		
-		std::ostream shmStream(&shmFileBuf);
-		// shmStream.flush();
-        shared_mem::shmSegmentToSizeMap[name] = size;
-        return shmStream;
-	}
-
-	std::istream& getInputStream(void *shm_base, off_t size)
-	{
-		FILE *stream;
-		off_t memSize = size; //+ extraSpaceInSharedMem;
-		// open the shared memory segment as a file
-		stream = fmemopen(shm_base, memSize, "r");
-		if (stream == NULL)
-		{
-		  // std::cerr << "Error opening the shared memory: " << strerror(errno) << std::endl;
-			SHM_ERROR_MSG("getInputStream", "Error opening the shared memory", errno);
-		}
-
-		// Converting a c FILE * to c++ stream
-		// We are using a GNU compiler dependent method, 
-		// won't work with other compiler
-		__gnu_cxx::stdio_filebuf<char> shmFileBuf(stream, std::ios::in);
-		std::istream shmStream(&shmFileBuf);
-
-		return shmStream;
-	}
-
 
 	void loadIndexToSharedMem(std::string inputDirName, std::string sharedMemPrefix)
 	{
@@ -212,10 +140,6 @@ namespace shared_mem
 
 	    while ((entry = readdir(dir)) != NULL) 
 	    {
-	    	/*if ((std::string(entry->d_name) == ".") || (std::string(entry->d_name) == ".."))
-	    	{
-	    		continue;
-	    	}*/
 	    	if (std::string(entry->d_name) == "hash.bin")
 	    	{
 
@@ -228,15 +152,9 @@ namespace shared_mem
 
 				std::string name = sharedMemPrefix + "hash";
 				shared_mem::shmSegmentToSizeMap[name] = size;
-
-				std::cerr << "Size == " << entry->d_name << "-" << size << std::endl;
-				std::cerr << "Size == " << name << "-" << shared_mem::shmSegmentToSizeMap[name] << std::endl;
-
 				
 				int shmFd;
 				size_t dataSize = static_cast<std::size_t>(size);
-		        std::cerr << "Segment name = " << name << std::endl;
-		        std::cerr << "Data size = " << dataSize << std::endl;
 				// Size on the shared memory that was allocated to hold the vector data
 				off_t shmSize = static_cast<off_t>(((dataSize/shared_mem::SHM_PAGE_SIZE) + 1 ) * shared_mem::SHM_PAGE_SIZE);
 		        void *shmBase = shared_mem::initSharedMemory(name, shmSize, shmFd);
@@ -254,20 +172,19 @@ namespace shared_mem
 				std::string name = sharedMemPrefix + "sa";
 				shared_mem::shmSegmentToSizeMap[name] = size;
 
-				std::cerr << "Size == " << entry->d_name << "-" << size << std::endl;
-				std::cerr << "Size == " << name << "-" << shared_mem::shmSegmentToSizeMap[name] << std::endl;
+				// std::cerr << "Size == " << entry->d_name << "-" << size << std::endl;
+				// std::cerr << "Size == " << name << "-" << shared_mem::shmSegmentToSizeMap[name] << std::endl;
 
 				int shmFd;
 				size_t dataSize = static_cast<std::size_t>(size);
-		        std::cerr << "Segment name = " << name << std::endl;
-		        std::cerr << "Data size = " << dataSize << std::endl;
+		        // std::cerr << "Segment name = " << name << std::endl;
+		        // std::cerr << "Data size = " << dataSize << std::endl;
 				// Size on the shared memory that was allocated to hold the vector data
 				off_t shmSize = static_cast<off_t>(((dataSize/shared_mem::SHM_PAGE_SIZE) + 1 ) * shared_mem::SHM_PAGE_SIZE);
 		        void *shmBase = shared_mem::initSharedMemory(name, shmSize, shmFd);
 		        // read content of infile to shared memory
 				infile.read ((char *)shmBase,size);
 	    	}
-	        // printf("%s\n",entry->d_name);
 	    }
 
 	    shared_mem::saveJSONMap(shared_mem::shmSegmentToSizeMap, shared_mem::memName + "quasi_shm_segment_size.json");
@@ -279,7 +196,6 @@ namespace shared_mem
 	void saveIndexToDisk(std::string outputDirName, std::string sharedMemPrefix)
 	{
 		std::string segmentName = (sharedMemPrefix + "hash");
-		// if (segmentName == (sharedMemPrefix + "hash"))
     	{
     		std::ofstream outfile ((outputDirName + "/" + "hash.bin"),std::ofstream::binary);
 
@@ -295,7 +211,6 @@ namespace shared_mem
 	        // read content of infile to shared memory
 			outfile.write ((char*)shmBase,size);
     	}
-    	// else if (segmentName == (sharedMemPrefix + "sa"))
     	segmentName.clear();
     	segmentName = (sharedMemPrefix + "sa");
     	{
@@ -314,13 +229,6 @@ namespace shared_mem
 			outfile.write ((char*)shmBase,size);
     	}
 	}
-	// @for test purpose
-	void display(char *prog, char *bytes, int n)
-	{
-	  printf("display: %s\n", prog);
-	  for (int i = 0; i < n; i++) 
-	    { printf("%02x%c", bytes[i], ((i+1)%16) ? ' ' : '\n'); }
-	  printf("\n");
-	}
+
 
 }

@@ -120,31 +120,6 @@ namespace shared_mem
 	int removeSharedMemory(std::string name);
 	// int shm_unlink(const char *name);
 
-	// @brief returns the output stream pointed by the name
-	// @param name is the name of the shared memory segment
-	// @return returns a output stream, this can be used by cereal
-	// to write the output in the shared memory
-	// we use this output stream to write archive data to shared memory
-	// we will read the archive data in the similar manner from the shared mem
-	std::ostream& getOutputStream(std::string name);
-
-	// @brief shm_base get output stream from a shared memory address
-	// @param shared meory address
-	std::ostream& getOutputStream(void *shm_base, off_t size);
-    std::ostream& getOutputStream(std::string name, off_t size);
-
-	// @brief returns the intput stream pointed by the name
-	// @param name is the name of the shared memory segment to read from
-	// @return returns a intput stream, this can be used by cereal
-	// to read the input from the shared memory segment
-	// we use this input stream to read archive data from shared memory
-	std::istream& getInputStream(std::string name);
-
-	// @brief shm_base get input stream from a shared memory address
-	// @param shared meory address
-	std::istream& getInputStream(void *shm_base, off_t size);
-
-
 
 	// @brief saves a std::vector 'vec' data to shared memory name 'name' 
 	// in a serialized binary format

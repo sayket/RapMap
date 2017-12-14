@@ -586,27 +586,16 @@ int rapMapSAMap(int argc, char* argv[]) {
 
     cmd.parse(argc, argv);
 
-  	//test shared mem command
     // @CSE549
     //test shared mem command
     if (!sharedMem.getValue().empty())
     {
       shared_mem::memName=sharedMem.getValue();
-      // std::cerr << "Inside SAMapper - shared_mem name = " << shared_mem::memName << std::endl;
       // load the shared memory segment names to shmSegmentToSizeMap
       shared_mem::loadJSONMap(shared_mem::shmSegmentToSizeMap, shared_mem::memName + "quasi_shm_segment_size.json");
       shared_mem::isSharedMem = true;
     }
 
-    
-    // test 
-    /*for(auto m:shared_mem::shmSegmentToSizeMap)
-    {
-      std::cerr << m.first <<"-" << m.second <<std::endl;
-    }*/
-
-	// std::string memName=sharedMem.getValue();
-	//std::cerr<<"The shared memory location name is "<<memName<<'\n';
 
     // If we're supposed to be quiet, only print out warnings and above
     if (quiet.getValue()) {

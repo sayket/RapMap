@@ -222,7 +222,7 @@ public:
         if (built_) 
         {
             
-            std::string hashFN = ofileBase + ".bph";
+            std::string hashFN = ofileBase + "bph";
             {                       
                 int shmFd;
 
@@ -260,7 +260,7 @@ public:
             }
 
             // and the values
-            std::string dataFN = ofileBase + ".val";
+            std::string dataFN = ofileBase + "val";
             {                       
                 int shmFd;
                 size_t dataSize = static_cast<std::size_t>( (data_.size() * sizeof(IndexT))
@@ -291,6 +291,9 @@ public:
                     {
                         cereal::BinaryOutputArchive shmArchive(shmStream);
                         shmArchive.saveBinary(data_.data(), (data_.size() * sizeof(IndexT)));
+
+
+
                         shmArchive.saveBinary(lens_.data(), (lens_.size() * sizeof(uint8_t)));
                         // @TODO: I might decide to serialize this part using two vectors of key anf val
                         // Not use the serialize function, after all it's a map
@@ -302,8 +305,97 @@ public:
                 // close the shared memory segment from this process
                 shared_mem::deinitializeSharedMemory(shmBase, shmFd, shmSize);
                 shared_mem::shmSegmentToSizeMap[dataFN] = dataSize;
+                shared_mem::shmSegmentToSizeMap[dataFN + "data"] = data_.size() * sizeof(IndexT);
+                shared_mem::shmSegmentToSizeMap[dataFN + "lens"] = lens_.size() * sizeof(uint8_t);
             }
         }
+    }
+    // @CSE549 
+    // shared memory save of the min perfect hash
+    void load(const std::string& ofileBase, bool isSharedMem) {
+        std::string hashFN = ofileBase + "bph";
+        std::string dataFN = ofileBase + "val";
+
+        /*if ( !FileExists_(hashFN.c_str()) ) {
+            std::cerr << "BooM: Looking for perfect hash function file [" << hashFN << "], which doesn't exist! exiting.\n";
+            std::exit(1);
+        }
+        if ( !FileExists_(dataFN.c_str()) ) {
+            std::cerr << "BooM: Looking for key-value file [" << dataFN << "], which doesn't exist! exiting.\n";
+            std::exit(1);
+        }*/
+
+        // load the perfect hash function
+        {
+            boophf_.reset(new BooPHFT);
+            // std::ifstream is(hashFN, std::ios::binary);
+
+            int shmFd;
+            size_t dataSize = static_cast<std::size_t>( shared_mem::shmSegmentToSizeMap[hashFN]);
+            std::cerr << "Data size = " << dataSize << std::endl;
+            // Size on the shared memory would be the minimum (SHM_PAGE_SIZE)4K size that can
+            // hold the vector data
+
+            // @FIXME: Allocating twice more data than needed, probably need to cut it off
+            off_t shmSize = static_cast<off_t>(((dataSize/shared_mem::SHM_PAGE_SIZE) + 1 ) * shared_mem::SHM_PAGE_SIZE);
+
+            void *shmBase = shared_mem::initSharedMemory(hashFN, shmSize, shmFd);
+
+            // @FIXME:
+            // Converting a c file descriptor to c++ stream
+            // We are using a GNU compiler dependent method, 
+            // won't work with other compiler
+            __gnu_cxx::stdio_filebuf<char> shmFileBuf(shmFd, std::ios::in);
+            {
+                // save the perfect hash function
+                std::istream shmStream(&shmFileBuf);
+                {
+                    boophf_->load(shmStream);
+                }
+                // shmStream.flush();
+            }
+            
+            // close the shared memory segment from this process
+            shared_mem::deinitializeSharedMemory(shmBase, shmFd, shmSize);
+        }
+        // and the values
+        {
+            int shmFd;
+            size_t dataSize = static_cast<std::size_t>( shared_mem::shmSegmentToSizeMap[dataFN]);
+            std::cerr << "Data size --dataFN = " << dataSize << std::endl;
+            // Size on the shared memory would be the minimum (SHM_PAGE_SIZE)4K size that can
+            // hold the vector data
+
+            // @FIXME: Allocating twice more data than needed, probably need to cut it off
+            off_t shmSize = static_cast<off_t>(((dataSize/shared_mem::SHM_PAGE_SIZE) + 1 ) * shared_mem::SHM_PAGE_SIZE);
+
+            void *shmBase = shared_mem::initSharedMemory(dataFN, shmSize, shmFd);
+
+            // @FIXME:
+            // Converting a c file descriptor to c++ stream
+            // We are using a GNU compiler dependent method, 
+            // won't work with other compiler
+            __gnu_cxx::stdio_filebuf<char> shmFileBuf(shmFd, std::ios::in);
+            {
+                // save the perfect hash function
+                std::istream shmStream(&shmFileBuf);
+                {
+                    cereal::BinaryInputArchive inArchive(shmStream);
+                    inArchive.loadBinary(data_.data(), static_cast<off_t>(shared_mem::shmSegmentToSizeMap[dataFN + "data"]));
+                    // inArchive(data_);
+                    std::cerr << "Data size --data_ = " << shared_mem::shmSegmentToSizeMap[dataFN + "data"] << std::endl;
+                    inArchive.loadBinary(lens_.data(), static_cast<off_t>(shared_mem::shmSegmentToSizeMap[dataFN + "lens"]));
+                    // inArchive(lens_);
+                    overflow_.unserialize(typename spp_utils::pod_hash_serializer<IndexT, IndexT>(), &shmStream);
+                }
+                // shmStream.flush();
+            }
+            
+            // close the shared memory segment from this process
+            shared_mem::deinitializeSharedMemory(shmBase, shmFd, shmSize);
+        }
+
+        built_ = true;
     }
     
     void load(const std::string& ofileBase) {

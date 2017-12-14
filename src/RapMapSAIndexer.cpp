@@ -219,14 +219,28 @@ bool buildPerfectHash(const std::string& outputDir, std::string& concatText,
   std::cout << "\ndone.\n";
   std::string outputPrefix = outputDir + "hash_info";
   std::cout << "saving the perfect hash and SA intervals to disk ... ";
-    /*if (shared_mem::isSharedMem)
-    {
-        intervals.save(shared_mem::memName + "hash_info", shared_mem::isSharedMem);
-    }
-    else*/
-    {
-        intervals.save(outputPrefix);
-    }
+
+  // @CSE549
+  /*if (shared_mem::isSharedMem)
+  {
+    auto it = intervals.begin();
+    std::cerr << it->first << "----" << it->second.begin_ << std::endl;
+      int k=0;
+      for (auto it = intervals.begin(); it!= intervals.end(); ++it)
+      {
+        if (k == 5)
+        {
+          break;
+        }
+        std::cerr << it->first << "----" << it->second.begin_ << std::endl;
+        k++;
+      }
+      intervals.save(shared_mem::memName + "hashinfo", shared_mem::isSharedMem);
+  }
+  else*/
+  {
+      intervals.save(outputPrefix);
+  }
   
   std::cout << "done.\n";
 
@@ -465,45 +479,7 @@ bool buildHash(const std::string& outputDir, std::string& concatText,
   
   /* 
    * @CSE549 Save regHash to shared memory
-   * @TODO: We could make the hash into two vectors of key and value 
-   * Then save the vectors in the file
-   * We can just load them using as vector then make a map out of it 
    */
-    /*if (shared_mem::isSharedMem)
-    {
-        std::vector<WordT> hashKey;
-        // std::vector<uint64_t> hashKey;
-        std::vector<rapmap::utils::SAInterval<IndexT>> hashVal;
-
-        // iteraate throuogh the map and load the key value to the vectors to save them
-        // using cereal
-        for( auto it=khash.begin(); it!=khash.end(); it++)
-        {
-            hashKey.push_back(it->first);
-            hashVal.push_back(it->second);
-
-            // std::cerr << (it->first) << "-" << (it->second) << std::endl;
-        }
-
-        // Now save them using the shared_mem vector saver
-        {
-            std::cerr << "Inside SAIndexer - shared_mem name = " << shared_mem::memName << std::endl;
-            shared_mem::saveBinaryVector(hashKey, (shared_mem::memName + "hashkey"));
-            std::cerr << hashKey.size()*sizeof(WordT) << "-" << hashKey.size() <<"-" << sizeof(WordT) << std::endl;
-            std::cerr << "\n shared::memory:: Saved the hashkey to shared memory \n";
-            shared_mem::saveBinaryVector(hashVal, (shared_mem::memName + "hashval"));
-            std::cerr << hashVal.size()*sizeof(rapmap::utils::SAInterval<IndexT>) << std::endl;
-            std::cerr << "\n shared::memory:: Saved the hashval to shared memory \n";
-        }
-
-        // Test
-        for (int i = 0; i < 10; ++i)
-        {
-            // std::cerr << hashKey[i] << std::endl;
-            std::cerr << hashKey[i] << "-" << hashVal[i].begin_ << "-" << hashVal[i].end_ << std::endl;
-        }
-        // shared_mem::removeSharedMemoryWithPrefix(shared_mem::memName);
-    }*/
     if (shared_mem::isSharedMem)
     {
       int shmFd;
@@ -527,15 +503,6 @@ bool buildHash(const std::string& outputDir, std::string& concatText,
           std::cerr << "saving hash to disk . . . ";
           // test
           int k=0;
-          /*for (auto it = khash.begin(); it!= khash.end(); it++)
-          {
-            if (k == 5)
-            {
-              break;
-            }
-            std::cerr << it->first << "----" << it->second.begin_ << std::endl;
-            k++;
-          }*/
           khash.serialize(typename spp_utils::pod_hash_serializer<WordT, rapmap::utils::SAInterval<IndexT>>(),
                           &shmStream);
           std::cerr << "done\n";
@@ -860,7 +827,7 @@ void indexTranscriptsSA(ParserT* parser,
       cereal::BinaryOutputArchive seqArchive(seqStream);
 
       //@CSE549 Test 
-      std::cerr << "trancript name len = " << transcriptNames[0] << " = " << transcriptNames.size() << std::endl;
+      // std::cerr << "trancript name len = " << transcriptNames[0] << " = " << transcriptNames.size() << std::endl;
 
       seqArchive(transcriptNames);
       
@@ -1094,7 +1061,6 @@ int rapMapSAIndex(int argc, char* argv[]) {
   {
     shared_mem::saveJSONMap(shared_mem::shmSegmentToSizeMap, shared_mem::memName + "quasi_shm_segment_size.json");
   }
-  
 
   return 0;
 }

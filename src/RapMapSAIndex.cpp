@@ -160,34 +160,24 @@ bool loadHashFromIndex(const std::string& indexDir,
 {
     
     // @CSE549 load the hash from the shared mem 
-    // laod the two vectors and make the hash
     /*if (shared_mem::isSharedMem)
     {
-        std::vector<uint64_t> hashKey;
-        std::vector<rapmap::utils::SAInterval<IndexT>> hashVal;
+        std::string hashBase = shared_mem::memName + "hashinfo";
+        // std::cout << 
+        h.load(hashBase, shared_mem::isSharedMem);
+        auto it = h.begin();
+        std::cerr << it->first << "----" << it->second.begin_ << std::endl;
+        /*int k=0;
+        for (auto it = h.begin(); it!= h.end(); ++it)
         {
-            // logger->info("loading hash info");
-            // ScopedTimer timer;
-            std::cerr << "Inside SAIndex, perfect hash - shared_mem name = " << shared_mem::memName << std::endl;
-            shared_mem::loadBinaryVector(hashKey, shared_mem::memName + "hashkey");
-            shared_mem::loadBinaryVector(hashVal, shared_mem::memName + "hashval");
-
-            for (int i = 0; i < 10; ++i)
-            {
-                std::cerr << hashKey[i] << "-" << hashVal[i].begin_ << "-" << hashVal[i].end_ << std::endl;
-            }
-            // recreating the map from the vectors
-            for (int i = 0; i < hashKey.size(); ++i)
-            {
-                h[hashKey[i]] = hashVal[i];
-            }
-
-            // removes the sharedm mem segment after  each run of maper
-            // @TODO: remove this later
-            shared_mem::removeSharedMemoryWithPrefix(shared_mem::memName);
+          if (k == 5)
+          {
+            break;
+          }
+          std::cerr << it->first << "----" << it->second.begin_ << std::endl;
+          k++;
         }
     }
-
     else*/
     {
         std::string hashBase = indexDir + "hash_info";

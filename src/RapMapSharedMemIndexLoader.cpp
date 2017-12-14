@@ -63,13 +63,6 @@ int rapMapSharedMemIndexLoader(int argc, char* argv[])
       "path");
   TCLAP::ValueArg<std::string> sharedMem("y", "sharedMemory", "Name of shared memory location", true, "","name string");
   
-  /*
-  TCLAP::SwitchArg perfectHash(
-      "f", "frugalPerfectHash", "Use a frugal variant of the perfect hash --- "
-                          "this will considerably slow construction, and somewhat slow lookup, but "
-                          "hash construction and the subsequent mapping will require the least memory."
-      false);
-  */
   
   cmd.add(load);
   cmd.add(save);
@@ -96,13 +89,13 @@ int rapMapSharedMemIndexLoader(int argc, char* argv[])
   if (isLoad)
   {
   	shared_mem::loadIndexToSharedMem(fileDir, shared_mem::memName);
-    std::cerr << "loading index to shared memory \n";
+    std::cerr << "loading index to shared memory... \n";
   }
   else if (isSave)
   {
     shared_mem::loadJSONMap(shared_mem::shmSegmentToSizeMap, shared_mem::memName + "quasi_shm_segment_size.json");
   	shared_mem::saveIndexToDisk(fileDir, shared_mem::memName);
-    std::cerr << "saving index to disk \n";
+    std::cerr << "saving index to disk... \n";
   }
   else if (isRemove)
   {
